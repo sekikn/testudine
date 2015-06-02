@@ -286,6 +286,10 @@ function open_jira_footer
   add_jira_footer "Java" "${javaversion}"
   add_jira_footer "uname" "${unamea}"
   add_jira_footer "protoc" "${protoc}"
+
+  if [[ -n ${PERSONALITY} ]]; then
+    add_jira_footer "Personality" ${PERSONALITY}
+  fi
 }
 
 ## @description  Put docker stats in various tables
@@ -686,6 +690,7 @@ function testudine_usage
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
   echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/${PROJECT_NAME}-test-patch/pid')"
+  echo "--personality=<file>   The personality file to load"
   echo "--plugins=<dir>        A directory of user provided plugins. see test-patch.d for examples (default empty)"
   echo "--project=<name>       The short name for project currently using test-patch (default 'testudine')"
   echo "--resetrepo            Forcibly clean the repo"
@@ -831,6 +836,9 @@ function parse_args
       --patch-dir=*)
         USER_PATCH_DIR=${i#*=}
       ;;
+      --personality=*)
+        PERSONALITY=${i#*=}
+      ;;
       --plugins=*)
         USER_PLUGIN_DIR=${i#*=}
       ;;
@@ -878,6 +886,11 @@ function parse_args
       ;;
       --wget-cmd=*)
         WGET=${i#*=}
+      ;;
+      --*)
+        ## PATCH_OR_ISSUE can't be a --.  So this is probably
+        ## a plugin thing.
+        continue
       ;;
       *)
         PATCH_OR_ISSUE=${i}
@@ -3085,6 +3098,26 @@ function importplugins
     testudine_debug "Importing ${i}"
     . "${i}"
   done
+
+  if [[ -n ${PERSONALITY} ]]; then
+    . "${PERSONALITY}"
+  fi
+}
+
+## @description  Let plugins also get a copy of the arguments
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+function parse_args_plugin
+{
+  for plugin in ${PLUGINS}; do
+    if declare -f ${plugin}_parse_args >/dev/null 2>&1; then
+      testudine_debug "Running ${plugin}_parse_args"
+      #shellcheck disable=SC2086
+      ${plugin}_parse_args "$@"
+      (( RESULT = RESULT + $? ))
+    fi
+  done
 }
 
 ## @description  Register test-patch.d plugins
@@ -3106,11 +3139,13 @@ setup_defaults
 
 parse_args "$@"
 
+importplugins
+
+parse_args_plugins "$@"
+
 open_jira_footer
 
 finish_docker_stats
-
-importplugins
 
 locate_patch
 
