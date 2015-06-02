@@ -842,8 +842,6 @@ function parse_args
       ;;
       --reexec)
         REEXECED=true
-        start_clock
-        add_jira_table 0 reexec "precommit patch detected."
       ;;
       --resetrepo)
         RESETREPO=true
@@ -897,13 +895,9 @@ function parse_args
   fi
 
   # if we requested offline, pass that to mvn
-  if [[ ${OFFLINE} == "true" ]] ; then
+  if [[ ${OFFLINE} == "true" ]]; then
     MAVEN_ARGS=(${MAVEN_ARGS[@]} --offline)
   fi
-
-  # we need absolute dir for ${BASEDIR}
-  cd "${CWD}"
-  BASEDIR=$(cd -P -- "${BASEDIR}" >/dev/null && pwd -P)
 
   if [[ -z "${PATCH_OR_ISSUE}" ]]; then
     testudine_usage
@@ -947,10 +941,7 @@ function parse_args
     NATIVE_PROFILE=-Pnative
     REQUIRE_TEST_LIB_HADOOP=-Drequire.test.libhadoop
   fi
-  if [[ -z "${PATCH_OR_ISSUE}" ]]; then
-    testudine_usage
-    exit 1
-  fi
+
   if [[ ${JENKINS} == "true" ]]; then
     echo "Running in Jenkins mode"
     ISSUE=${PATCH_OR_ISSUE}
