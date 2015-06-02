@@ -45,6 +45,7 @@ function setup_defaults
   USER_PLUGIN_DIR=""
   LOAD_SYSTEM_PLUGINS=true
 
+  DOCKERSUPPORT=false
   FINDBUGS_HOME=${FINDBUGS_HOME:-}
   FINDBUGS_WARNINGS_FAIL_PRECHECK=false
   ECLIPSE_HOME=${ECLIPSE_HOME:-}
@@ -63,7 +64,6 @@ function setup_defaults
   ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
   TIMER=$(date +"%s")
   PATCHURL=""
-
   OSTYPE=$(uname -s)
 
   # Solaris needs POSIX, not SVID
@@ -270,12 +270,12 @@ function add_jira_table
   fi
 }
 
-## @description  Put the final environment information at the bottom
+## @description  Put the opening environment information at the bottom
 ## @description  of the footer table
 ## @stability     stable
 ## @audience     private
 ## @replaceable  yes
-function close_jira_footer
+function open_jira_footer
 {
   # shellcheck disable=SC2016
   local -r javaversion=$("${JAVA_HOME}/bin/java" -version 2>&1 | head -1 | ${AWK} '{print $NF}' | tr -d \")
@@ -285,6 +285,18 @@ function close_jira_footer
   add_jira_footer "Java" "${javaversion}"
   add_jira_footer "uname" "${unamea}"
   add_jira_footer "protoc" "${protoc}"
+}
+
+## @description  Put docker stats in various tables
+## @stability     stable
+## @audience     private
+## @replaceable  yes
+function finish_docker_stats
+{
+  if [[ ${DOCKERMODE} == true ]]; then
+    # DOCKER_VERSION is set by our creator.
+    add_jira_footer "Docker" "${DOCKER_VERSION}"
+  fi
 }
 
 ## @description  Put the final elapsed time at the bottom of the table.
@@ -449,11 +461,12 @@ function write_to_jira
   local -r commentfile=${1}
   shift
 
-  local retval
+  local retval=0
 
   if [[ ${OFFLINE} == false
-     && ${JENKINS} == true ]]; then
-    export USER=hudson
+     && ${JENKINS} == true
+     && -n ${JIRA_PASSWD} ]]; then
+
     # shellcheck disable=SC2086
     ${JIRACLI} --comment "$(cat ${commentfile})" \
                -s https://issues.apache.org/jira \
@@ -481,25 +494,25 @@ function verify_patchdir_still_exists
   local extra=""
 
   if [[ ! -d ${PATCH_DIR} ]]; then
-      rm "${commentfile}" 2>/dev/null
+    rm "${commentfile}" 2>/dev/null
 
-      echo "(!) The patch artifact directory has been removed! " > "${commentfile}"
-      echo "This is a fatal error for test-patch.sh.  Aborting. " >> "${commentfile}"
-      echo
-      cat ${commentfile}
-      echo
-      if [[ ${JENKINS} == true ]]; then
-        if [[ -n ${NODE_NAME} ]]; then
-          extra=" (node ${NODE_NAME})"
-        fi
-        echo "Jenkins${extra} information at ${BUILD_URL} may provide some hints. " >> "${commentfile}"
-
-        write_to_jira ${commentfile}
+    echo "(!) The patch artifact directory has been removed! " > "${commentfile}"
+    echo "This is a fatal error for test-patch.sh.  Aborting. " >> "${commentfile}"
+    echo
+    cat ${commentfile}
+    echo
+    if [[ ${JENKINS} == true ]]; then
+      if [[ -n ${NODE_NAME} ]]; then
+        extra=" (node ${NODE_NAME})"
       fi
+      echo "Jenkins${extra} information at ${BUILD_URL} may provide some hints. " >> "${commentfile}"
 
-      rm "${commentfile}"
-      cleanup_and_exit ${RESULT}
+      write_to_jira ${commentfile}
     fi
+
+    rm "${commentfile}"
+    cleanup_and_exit ${RESULT}
+  fi
 }
 
 ## @description generate a list of all files and line numbers that
@@ -519,6 +532,7 @@ function compute_gitdiff
   local actual
 
   pushd "${BASEDIR}" >/dev/null
+  ${GIT} add --all --intent-to-add
   while read line; do
     if [[ ${line} =~ ^\+\+\+ ]]; then
       file="./"$(echo "${line}" | cut -f2- -d/)
@@ -591,6 +605,46 @@ function relative_patchdir
   return 0
 }
 
+## @description  shortcut for docker
+## @audience     private
+## @stability    evolving
+## @replaceable  no
+function docker_launch
+{
+  local patchdir
+
+  if [[ ${DOCKERSUPPORT} == false ]]; then
+    return
+  fi
+
+  big_console_header "Switching to Docker"
+
+  start_clock
+
+  client=$(docker version | grep 'Client version' | cut -f2 -d: | tr -d ' ')
+  server=$(docker version | grep 'Server version' | cut -f2 -d: | tr -d ' ')
+
+  dockerversion="C=${client}/S=${server}"
+
+  TESTPATCHMODE="${USER_PARAMS[*]}"
+  if [[ -n "${BUILD_URL}" ]]; then
+    TESTPATCHMODE="--build-url=${BUILD_URL} ${TESTPATCHMODE}"
+  fi
+  TESTPATCHMODE="--tpglobaltimer=${GLOBALTIMER} ${TESTPATCHMODE}"
+  TESTPATCHMODE="--tpdockertimer=${TIMER} ${TESTPATCHMODE}"
+
+  export TESTPATCHMODE
+  patchdir=$(relative_patchdir)
+  export STARTBINDIR=${BINDIR}
+  export PROJECT_NAME
+  cd "${BASEDIR}"
+  exec bash "${BINDIR}/test-patch-docker/test-patch-docker.sh" \
+     --dockerversion="${dockerversion}" \
+     --java-home="${JAVA_HOME}" \
+     --patch-dir="${patchdir}" \
+     --project="${PROJECT_NAME}"
+}
+
 ## @description  Print the usage information
 ## @audience     public
 ## @stability    stable
@@ -614,9 +668,11 @@ function testudine_usage
   echo "--contrib-guide=<url>  URL to point new users towards project conventions. (default Hadoop's wiki)"
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
+  echo "--docker               Spawn a docker container"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
   echo "--findbugs-strict-precheck If there are Findbugs warnings during precheck, fail"
   echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default '^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$')"
+  echo "--java-home=<path>     Set JAVA_HOME (In Docker mode, this should be local to the image)"
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
   echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/${PROJECT_NAME}-test-patch/pid')"
@@ -643,6 +699,7 @@ function testudine_usage
   echo
   echo "Jenkins-only options:"
   echo "--jenkins              Run by Jenkins (runs tests and posts results to JIRA)"
+  echo "--build-url            Set the build location web page"
   echo "--eclipse-home=<path>  Eclipse home directory (default ECLIPSE_HOME environment variable)"
   echo "--jira-cmd=<cmd>       The 'jira' command to use (default 'jira')"
   echo "--jira-password=<pw>   The password for the 'jira' command"
@@ -679,6 +736,9 @@ function parse_args
       --build-native=*)
         BUILD_NATIVE=${i#*=}
       ;;
+      --build-url=*)
+        BUILD_URL=${i#*=}
+      ;;
       --contrib-guide=*)
         HOW_TO_CONTRIBUTE=${i#*=}
       ;;
@@ -690,6 +750,12 @@ function parse_args
       ;;
       --dirty-workspace)
         DIRTY_WORKSPACE=true
+      ;;
+      --docker)
+        DOCKERSUPPORT=true
+      ;;
+      --dockermode)
+        DOCKERMODE=true
       ;;
       --eclipse-home=*)
         ECLIPSE_HOME=${i#*=}
@@ -790,6 +856,15 @@ function parse_args
         # shellcheck disable=SC2034
         TEST_THREADS=${i#*=}
       ;;
+      --tpglobaltimer=*)
+        GLOBALTIMER=${i#*=}
+      ;;
+      --tpdockertimer=*)
+        DOCKERLAUNCHTIMER=${i#*=}
+      ;;
+      --tpreexectimer=*)
+        REEXECLAUNCHTIMER=${i#*=}
+      ;;
       --wget-cmd=*)
         WGET=${i#*=}
       ;;
@@ -798,6 +873,15 @@ function parse_args
       ;;
     esac
   done
+
+  if [[ ${REEXECED} == true ]]; then
+    if [[ -n ${REEXECLAUNCHTIMER} ]]; then
+      TIMER=${REEXECLAUNCHTIMER};
+    else
+      start_clock
+    fi
+    add_jira_table 0 reexec "dev-support patch detected."
+  fi
 
   # if we requested offline, pass that to mvn
   if [[ ${OFFLINE} == "true" ]] ; then
@@ -812,20 +896,19 @@ function parse_args
     testudine_usage
     exit 1
   fi
-  if [[ ${JENKINS} == "true" ]] ; then
-    echo "Running in Jenkins mode"
-    ISSUE=${PATCH_OR_ISSUE}
-    RESETREPO=true
-    # shellcheck disable=SC2034
-    ECLIPSE_PROPERTY="-Declipse.home=${ECLIPSE_HOME}"
-  else
-    if [[ ${RESETREPO} == "true" ]] ; then
-      echo "Running in destructive (--resetrepo) developer mode"
+
+  if [[ ${DOCKERMODE} == true ]]; then
+    if [[ -n ${DOCKERLAUNCHTIMER} ]]; then
+      TIMER=${DOCKERLAUNCHTIMER};
     else
-      echo "Running in developer mode"
+      start_clock
     fi
-    JENKINS=false
+    add_jira_table 0 docker "docker mode"
   fi
+
+  # we need absolute dir for ${BASEDIR}
+  cd "${CWD}"
+  BASEDIR=$(cd -P -- "${BASEDIR}" >/dev/null && pwd -P)
 
   if [[ -n ${USER_PATCH_DIR} ]]; then
     PATCH_DIR="${USER_PATCH_DIR}"
@@ -846,6 +929,29 @@ function parse_args
 
   # we need absolute dir for PATCH_DIR
   PATCH_DIR=$(cd -P -- "${PATCH_DIR}" >/dev/null && pwd -P)
+
+  if [[ ${BUILD_NATIVE} == "true" ]]; then
+    NATIVE_PROFILE=-Pnative
+    REQUIRE_TEST_LIB_HADOOP=-Drequire.test.libhadoop
+  fi
+  if [[ -z "${PATCH_OR_ISSUE}" ]]; then
+    testudine_usage
+    exit 1
+  fi
+  if [[ ${JENKINS} == "true" ]]; then
+    echo "Running in Jenkins mode"
+    ISSUE=${PATCH_OR_ISSUE}
+    RESETREPO=true
+    # shellcheck disable=SC2034
+    ECLIPSE_PROPERTY="-Declipse.home=${ECLIPSE_HOME}"
+  else
+    if [[ ${RESETREPO} == "true" ]] ; then
+      echo "Running in destructive (--resetrepo) developer mode"
+    else
+      echo "Running in developer mode"
+    fi
+    JENKINS=false
+  fi
 
   GITDIFFLINES=${PATCH_DIR}/gitdifflines.txt
 }
@@ -1509,6 +1615,8 @@ function check_reexec
     --reexec \
     --branch="${PATCH_BRANCH}" \
     --patch-dir="${PATCH_DIR}" \
+    --tpglobaltimer="${GLOBALTIMER}" \
+    --tpreexectimer="${TIMER}" \
       "${USER_PARAMS[@]}"
 }
 
@@ -3082,13 +3190,13 @@ setup_defaults
 
 parse_args "$@"
 
+open_jira_footer
+
+finish_docker_stats
+
 importplugins
 
 locate_patch
-
-find_changed_files
-
-determine_needed_tests
 
 # from here on out, we'll be in ${BASEDIR} for cwd
 # routines need to pushd/popd if they change.
@@ -3099,6 +3207,15 @@ if [[ ${JENKINS} == "true" ]] ; then
     exit 100
   fi
 fi
+
+# if we are doing docker
+if [[ ${DOCKERSUPPORT} == true ]]; then
+   docker_launch
+fi
+
+find_changed_files
+
+determine_needed_tests
 
 check_reexec
 
@@ -3123,8 +3240,6 @@ check_mvninstall
 postinstall
 
 runtests
-
-close_jira_footer
 
 close_jira_table
 
