@@ -56,6 +56,7 @@ function shellcheck_private_findbash
 function shellcheck_preapply
 {
   local i
+  local msg
 
   verify_needed_test shellcheck
   if [[ $? == 0 ]]; then
@@ -73,6 +74,13 @@ function shellcheck_preapply
 
   # shellcheck disable=SC2016
   SHELLCHECK_VERSION=$(${SHELLCHECK} --version | ${GREP} version: | ${AWK} '{print $NF}')
+  msg="v${SHELLCHECK_VERSION}"
+
+  if [[ ${SHELLCHECK_VERSION} =~ 0.[0-3].[0-5] ]]; then
+    msg="${msg} (This is an old version that has serious bugs. Consider upgrading.)"
+  fi
+
+  add_jira_footer shellcheck "${msg}"
 
   echo "Running shellcheck against all identifiable shell scripts"
   pushd "${BASEDIR}" >/dev/null
@@ -178,6 +186,6 @@ function shellcheck_postapply
     return 1
   fi
 
-  add_jira_table +1 shellcheck "There were no new shellcheck (v${SHELLCHECK_VERSION}) issues."
+  add_jira_table +1 shellcheck "There were no new shellcheck issues."
   return 0
 }

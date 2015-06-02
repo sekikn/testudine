@@ -952,7 +952,6 @@ function parse_args
 
   if [[ ${BUILD_NATIVE} == "true" ]]; then
     NATIVE_PROFILE=-Pnative
-    REQUIRE_TEST_LIB_HADOOP=-Drequire.test.libhadoop
   fi
 
   if [[ ${JENKINS} == "true" ]]; then
