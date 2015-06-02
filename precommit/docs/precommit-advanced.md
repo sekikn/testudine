@@ -15,9 +15,18 @@
 test-patch
 ==========
 
+* [Docker Support](#Docker_Support)
 * [Maven Profiles](#Maven_Profiles)
 * [Plug-ins](#Plug-ins)
 * [Configuring for Other Projects](#Configuring_for_Other_Projects)
+
+# Docker Support
+
+By default, test-patch runs in the same shell where it was launched.  It can alternatively use Docker to launch itself into a container.  This is particularly useful if running under a QA environment that does not provide all the necessary binaries. For example, the patch requires a newer version of Java.
+
+The `--docker` parameter tells test-patch to run in Docker mode. The `--dockerfile` parameter allows one to provide a custom Dockerfile.  Be aware that test-patch will copy this file and append its necessary hooks in order to execute.
+
+test-patch includes code to automatically manage broken/stale container images that are hanging around if it is run in --jenkins mode.  In this way, if Docker fails to build the image, the disk space should eventually return.
 
 # Maven Profiles
 

@@ -37,7 +37,7 @@ function setup_defaults
   MAVEN_ARGS=()
 
   PROJECT_NAME=testudine
-  DOCKERFILE="${CWD}/test-patch-docker/Dockerfile-startstub"
+  DOCKERFILE="${BINDIR}/test-patch-docker/Dockerfile-startstub"
   HOW_TO_CONTRIBUTE="https://dierobotsdie.github.io/testudine/test-patch-names.html"
   JENKINS=false
   BASEDIR=$(pwd)
@@ -628,10 +628,9 @@ function docker_launch
 
   cd "${CWD}"
   mkdir -p "${PATCH_DIR}/precommit-test"
-  cp -pr "${BASEDIR}"/precommit/test-patch* "${PATCH_DIR}/precommit-test"
-  cp -pr "${BASEDIR}"/precommit/smart-apply* "${PATCH_DIR}/precommit-test"
+  cp -pr "${BINDIR}"/* "${PATCH_DIR}/precommit-test"
   cat ${DOCKERFILE} \
-      "${BASEDIR}/precommit/test-patch-docker/Dockerfile-endstub" \
+      "${BINDIR}/Dockerfile-endstub" \
       > "${PATCH_DIR}/precommit-test/test-patch-docker/Dockerfile"
 
   client=$(docker version | grep 'Client version' | cut -f2 -d: | tr -d ' ')
@@ -3098,6 +3097,11 @@ function importplugins
     . "${i}"
   done
 
+  if [[ -z ${PERSONALITY}
+      && -f "${BINDIR}/personality/${PROJECT_NAME}.sh" ]]; then
+    PERSONALITY="${BINDIR}/personality/${PROJECT_NAME}.sh"
+  fi
+
   if [[ -n ${PERSONALITY} ]]; then
     testudine_debug "Importing ${PERSONALITY}"
     . "${PERSONALITY}"
@@ -3108,7 +3112,7 @@ function importplugins
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
-function parse_args_plugin
+function parse_args_plugins
 {
   for plugin in ${PLUGINS}; do
     if declare -f ${plugin}_parse_args >/dev/null 2>&1; then
