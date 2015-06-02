@@ -37,7 +37,8 @@ function setup_defaults
   MAVEN_ARGS=()
 
   PROJECT_NAME=testudine
-  HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
+  DOCKERFILE="${CWD}/test-patch-docker/Dockerfile-startstub"
+  HOW_TO_CONTRIBUTE="https://dierobotsdie.github.io/testudine/test-patch-names.html"
   JENKINS=false
   BASEDIR=$(pwd)
   RELOCATE_PATCH_DIR=false
@@ -621,6 +622,14 @@ function docker_launch
 
   start_clock
 
+  cd "${CWD}"
+  mkdir -p "${PATCH_DIR}/precommit-test"
+  cp -pr "${BASEDIR}"/precommit/test-patch* "${PATCH_DIR}/precommit-test"
+  cp -pr "${BASEDIR}"/precommit/smart-apply* "${PATCH_DIR}/precommit-test"
+  cat ${DOCKERFILE} \
+      "${BASEDIR}/precommit/test-patch-docker/Dockerfile-endstub" \
+      > "${PATCH_DIR}/precommit-test/test-patch-docker/Dockerfile"
+
   client=$(docker version | grep 'Client version' | cut -f2 -d: | tr -d ' ')
   server=$(docker version | grep 'Server version' | cut -f2 -d: | tr -d ' ')
 
@@ -669,6 +678,7 @@ function testudine_usage
   echo "--debug                If set, then output some extra stuff to stderr"
   echo "--dirty-workspace      Allow the local git workspace to have uncommitted changes"
   echo "--docker               Spawn a docker container"
+  echo "--dockerfile=<file>    Dockerfile fragment to use as the base"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
   echo "--findbugs-strict-precheck If there are Findbugs warnings during precheck, fail"
   echo "--issue-re=<expr>      Bash regular expression to use when trying to find a jira ref in the patch name (default '^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$')"
@@ -753,6 +763,9 @@ function parse_args
       ;;
       --docker)
         DOCKERSUPPORT=true
+      ;;
+      --dockerfile=*)
+        DOCKERFILE=${i#*=}
       ;;
       --dockermode)
         DOCKERMODE=true
