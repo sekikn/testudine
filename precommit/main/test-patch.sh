@@ -3100,6 +3100,7 @@ function importplugins
   done
 
   if [[ -n ${PERSONALITY} ]]; then
+    testudine_debug "Importing ${PERSONALITY}"
     . "${PERSONALITY}"
   fi
 }
