@@ -91,109 +91,40 @@ function hadoop_javac_ordering
   #
 
   for module in ${HADOOP_MODULES}; do
-      case ${module} in
-        # (special case: all of them...)
-        \.)
-          case ${OSTYPE} in
-            Linux)
-              # shellcheck disable=SC2086
-              personality_enqueue_module ${module} ${special} \
-                -Pnative \
-                -Drequire.snappy -Drequire.openssl -Drequire.fuse \
-                -Drequire.test.libhadoop
-            ;;
-            Darwin)
-              JANSSON_INCLUDE_DIR=/usr/local/opt/jansson/include
-              JANSSON_LIBRARY=/usr/local/opt/jansson/lib
-              export JANSSON_LIBRARY JANSSON_INCLUDE_DIR
-              # shellcheck disable=SC2086
-              personality_enqueue_module ${module} ${special} \
-              -Pnative -Drequire.snappy  \
-              -Drequire.openssl \
-                -Dopenssl.prefix=/usr/local/opt/openssl/ \
-                -Dopenssl.include=/usr/local/opt/openssl/include \
-                -Dopenssl.lib=/usr/local/opt/openssl/lib \
-              -Drequire.libwebhdfs -Drequire.test.libhadoop
-            ;;
-            *)
-              # shellcheck disable=SC2086
-              personality_enqueue_module ${module} ${special} \
-                -Pnative \
-                -Drequire.snappy -Drequire.openssl \
-                -Drequire.libwebhdfs -Drequire.test.libhadoop
-            ;;
-          esac
-        ;;
-        hadoop-common-project|hadoop-common-project/hadoop-common)
-          case ${OSTYPE} in
-            Linux)
-              # shellcheck disable=SC2086
-              personality_enqueue_module ${module} ${special} \
-                -Pnative -Drequire.snappy \
-                -Drequire.openssl -Drequire.test.libhadoop
-            ;;
-            Darwin)
-              # shellcheck disable=SC2086
-              personality_enqueue_module ${module} ${special} \
-                -Pnative -Drequire.snappy  \
-                -Drequire.openssl \
-                  -Dopenssl.prefix=/usr/local/opt/openssl/ \
-                  -Dopenssl.include=/usr/local/opt/openssl/include \
-                  -Dopenssl.lib=/usr/local/opt/openssl/lib \
-                -Drequire.test.libhadoop
-            ;;
-            *)
-              # shellcheck disable=SC2086
-              personality_enqueue_module ${module} ${special} \
-                -Pnative -Drequire.snappy \
-                -Drequire.openssl -Drequire.libwebhdfs \
-                -Drequire.test.libhadoop
-            ;;
-          esac
-        ;;
-        hadoop-hdfs-project|hadoop-hdfs-project/hadoop-hdfs)
-        case ${OSTYPE} in
-          Linux)
-            # shellcheck disable=SC2086
-            personality_enqueue_module ${module} ${special} \
-              -Pnative -Drequire.fuse \
-              -Drequire.test.libhadoop
-            ;;
-            Darwin)
-              JANSSON_INCLUDE_DIR=/usr/local/opt/jansson/include
-              JANSSON_LIBRARY=/usr/local/opt/jansson/lib
-              export JANSSON_LIBRARY JANSSON_INCLUDE_DIR
-              # shellcheck disable=SC2086
-              personality_enqueue_module ${module} ${special} \
-                -Pnative -Drequire.libwebhdfs \
-                -Drequire.test.libhadoop
-            ;;
-            *)
-              # shellcheck disable=SC2086
-              personality_enqueue_module ${module} ${special} \
-                -Pnative -Drequire.libwebhdfs \
-                -Drequire.test.libhadoop
-            ;;
-          esac
-        ;;
-        hadoop-yarn-project|hadoop-yarn-project/hadoop-yarn|hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server|hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager)
+    if [[ ${JENKINS} == true
+        && ${DOCKERSUPPORT} == false ]]; then
+      personality_enqueue_module ${module} ${special} \
+        -Pnative \
+        -Drequire.snappy -Drequire.openssl -Drequire.fuse \
+        -Drequire.test.libhadoop
+    else
+      case ${OSTYPE} in
+        Linux)
           # shellcheck disable=SC2086
           personality_enqueue_module ${module} ${special} \
-            -Pnative -Drequire.test.libhadoop
+            -Pnative -Drequire.libwebhdfs \
+            -Drequire.snappy -Drequire.openssl -Drequire.fuse \
+            -Drequire.test.libhadoop
         ;;
-        hadoop-mapreduce-project|hadoop-mapreduce-project/hadoop-mapreduce-client|hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-nativetask)
+        Darwin)
+          JANSSON_INCLUDE_DIR=/usr/local/opt/jansson/include
+          JANSSON_LIBRARY=/usr/local/opt/jansson/lib
+          export JANSSON_LIBRARY JANSSON_INCLUDE_DIR
           # shellcheck disable=SC2086
           personality_enqueue_module ${module} ${special} \
-            -Pnative -Drequire.test.libhadoop
-        ;;
-        hadoop-tools|hadoop-tools/hadoop-pipes)
-          # shellcheck disable=SC2086
-          personality_enqueue_module ${module} ${special} \
-            -Pnative -Drequire.test.libhadoop
+          -Pnative -Drequire.snappy  \
+          -Drequire.openssl \
+            -Dopenssl.prefix=/usr/local/opt/openssl/ \
+            -Dopenssl.include=/usr/local/opt/openssl/include \
+            -Dopenssl.lib=/usr/local/opt/openssl/lib \
+          -Drequire.libwebhdfs -Drequire.test.libhadoop
         ;;
         *)
           # shellcheck disable=SC2086
-          personality_enqueue_module ${module} ${special}
+          personality_enqueue_module ${module} ${special} \
+            -Pnative \
+            -Drequire.snappy -Drequire.openssl \
+            -Drequire.libwebhdfs -Drequire.test.libhadoop
         ;;
       esac
   done
