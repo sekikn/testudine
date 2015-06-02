@@ -880,7 +880,7 @@ function parse_args
     else
       start_clock
     fi
-    add_jira_table 0 reexec "dev-support patch detected."
+    add_jira_table 0 reexec "precommit patch detected."
   fi
 
   # if we requested offline, pass that to mvn
