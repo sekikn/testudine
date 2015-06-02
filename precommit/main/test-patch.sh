@@ -1372,51 +1372,8 @@ function determine_needed_tests
   local i
 
   for i in ${CHANGED_FILES}; do
-    if [[ ${i} =~ src/main/webapp ]]; then
-      testudine_debug "tests/webapp: ${i}"
-    elif [[ ${i} =~ \.sh
-         || ${i} =~ \.cmd
-         ]]; then
-      testudine_debug "tests/shell: ${i}"
-    elif [[ ${i} =~ \.md$
-         || ${i} =~ \.md\.vm$
-         || ${i} =~ src/site
-         || ${i} =~ src/main/docs
-         ]]; then
-      testudine_debug "tests/site: ${i}"
-      add_test site
-    elif [[ ${i} =~ \.c$
-         || ${i} =~ \.cc$
-         || ${i} =~ \.h$
-         || ${i} =~ \.hh$
-         || ${i} =~ \.proto$
-         || ${i} =~ src/test
-         || ${i} =~ \.cmake$
-         || ${i} =~ CMakeLists.txt
-         ]]; then
-      testudine_debug "tests/units: ${i}"
-      add_test javac
-      add_test mvninstall
-      add_test unit
-    elif [[ ${i} =~ pom.xml$
-         || ${i} =~ \.java$
-         || ${i} =~ src/main
-         ]]; then
-      if [[ ${i} =~ src/main/bin
-         || ${i} =~ src/main/sbin ]]; then
-        testudine_debug "tests/shell: ${i}"
-      else
-        testudine_debug "tests/javadoc+units: ${i}"
-        add_test javac
-        add_test javadoc
-        add_test mvninstall
-        add_test unit
-      fi
-    fi
 
-    if [[ ${i} =~ \.java$ ]]; then
-      add_test findbugs
-    fi
+    personality_file_tests ${i}
 
     for plugin in ${PLUGINS}; do
       if declare -f ${plugin}_filefilter >/dev/null 2>&1; then
@@ -1815,7 +1772,7 @@ function precheck_javac
      return 0
   fi
 
-  personality branch javac
+  personality_modules branch javac
   mvn_modules_worker branch javac clean test
   result=$?
   mvn_modules_message branch javac
@@ -1843,7 +1800,7 @@ function precheck_javadoc
      return 0
   fi
 
-  personality branch javadoc
+  personality_modules branch javadoc
   mvn_modules_worker branch javadoc clean javadoc:javadoc
   result=$?
   mvn_modules_message branch javadoc
@@ -1871,7 +1828,7 @@ function precheck_site
     return 0
   fi
 
-  personality branch site
+  personality_modules branch site
   mvn_modules_worker branch site clean site site:stage
   result=$?
   mvn_modules_message branch site
@@ -2038,7 +1995,7 @@ function check_patch_javac
     return 0
   fi
 
-  personality patch javac
+  personality_modules patch javac
   mvn_modules_worker patch javac clean test
 
   until [[ ${i} -eq ${#MODULE[@]} ]]; do
@@ -2129,7 +2086,7 @@ function check_patch_javadoc
     return 0
   fi
 
-  personality patch javadoc
+  personality_modules patch javadoc
   mvn_modules_worker patch javadoc clean javadoc:javadoc
 
   until [[ ${i} -eq ${#MODULE[@]} ]]; do
@@ -2201,58 +2158,13 @@ function check_site
     return 0
   fi
 
-  personality patch site
+  personality_modules patch site
   mvn_modules_worker patch site clean site site:stage -Dmaven.javadoc.skip=true
   result=$?
   mvn_modules_message patch site
   if [[ ${result} != 0 ]]; then
     return 1
   fi
-  return 0
-}
-
-## @description  Verify all files have an Apache License
-## @audience     private
-## @stability    evolving
-## @replaceable  no
-## @return       0 on success
-## @return       1 on failure
-function check_apachelicense
-{
-  local numpatch
-
-  big_console_header "Determining number of patched release audit errors"
-
-  start_clock
-
-  personality patch releaseaudit
-  mvn_modules_worker patch releaseaudit apache-rat:check
-
-  #shellcheck disable=SC2038
-  find "${BASEDIR}" -name rat.txt | xargs cat > "${PATCH_DIR}/patch-releaseaudit.txt"
-
-  if [[ -f "${PATCH_DIR}/patch-releaseaudit.txt" ]] ; then
-    numpatch=$("${GREP}" -c '\!?????' "${PATCH_DIR}/patch-releaseaudit.txt")
-    echo ""
-    echo ""
-    echo "There appear to be ${numpatch} release audit warnings after applying the patch."
-    if [[ -n ${numpatch}
-       && ${numpatch} -gt 0 ]] ; then
-      add_jira_table -1 releaseaudit "Patch generated ${numpatch} release audit warnings."
-
-      echo "Lines that start with ????? in the release audit "\
-          "report indicate files that do not have an Apache license header:" \
-            > "${PATCH_DIR}/patch-releaseaudit-problems.txt"
-
-      ${GREP} '\!?????' "${PATCH_DIR}/patch-releaseaudit.txt" \
-      >>  "${PATCH_DIR}/patch-releaseaudit-problems.txt"
-
-      add_jira_footer releaseaudit "@@BASE@@/patch-releaseaudit-problems.txt"
-
-      return 1
-    fi
-  fi
-  add_jira_table 1 releaseaudit "Patch does not generate release audit warnings."
   return 0
 }
 
@@ -2278,7 +2190,7 @@ function precheck_mvninstall
     return 0
   fi
 
-  personality branch mvninstall
+  personality_modules branch mvninstall
   mvn_modules_worker branch mvninstall install -Dmaven.javadoc.skip=true
   result=$?
   mvn_modules_message branch mvninstall
@@ -2310,7 +2222,7 @@ function check_mvninstall
     return 0
   fi
 
-  personality patch mvninstall
+  personality_modules patch mvninstall
   mvn_modules_worker patch mvninstall install -Dmaven.javadoc.skip=true
   result=$?
   mvn_modules_message patch mvninstall
@@ -2352,7 +2264,7 @@ function findbugs_mvnrunner
   local i
   local savestop
 
-  personality "${name}" findbugs
+  personality_modules "${name}" findbugs
   mvn_modules_worker "${name}" findbugs clean test findbugs:findbugs
 
   until [[ ${i} -eq ${#MODULE[@]} ]]; do
@@ -2636,7 +2548,7 @@ function check_mvn_eclipse
     return 0
   fi
 
-  personality patch eclipse
+  personality_modules patch eclipse
   mvn_modules_worker patch eclipse eclipse:eclipse
   result=$?
   mvn_modules_message patch eclipse
@@ -2697,7 +2609,7 @@ function check_unittests
 
   fi
 
-  personality patch unit
+  personality_modules patch unit
   mvn_modules_worker patch unit clean install -fae
   if [[ $? == 0 ]]; then
     add_jira_table +1 unit "Patch unit tests appear healthy."
@@ -3079,7 +2991,7 @@ function postapply
 
   ((RESULT = RESULT + retval))
 
-  for routine in check_patch_javadoc check_apachelicense check_site
+  for routine in check_patch_javadoc check_site
   do
     verify_patchdir_still_exists
     testudine_debug "Running ${routine}"

@@ -65,7 +65,7 @@ $ cd <your repo>
 $ dev-support/test-patch.sh --dirty-workspace <filename>
 ```
 
-The `--dirty-workspace` flag tells test-patch that the repository is not clean and it is ok to continue.  This version command does not run the unit tests.  
+The `--dirty-workspace` flag tells test-patch that the repository is not clean and it is ok to continue.  This version command does not run the unit tests.
 
 To do that, we need to provide the --run-tests command:
 
@@ -97,11 +97,11 @@ test-patch has many other features and command line options for the basic user. 
 
 ### Self-testing
 
-If test-patch is placed in a directory off of dev-support, test-patch can sense that it or parts that is dependent upon is being patched.  It will copy the patched version of itself in the patch processing directory and re-execute itself.  
+If test-patch is placed in a directory off of dev-support, test-patch can sense that it or parts that is dependent upon is being patched.  It will copy the patched version of itself in the patch processing directory and re-execute itself.
 
 ### Plug-ins
 
-test-patch allows one to add to its basic feature set via plug-ins.  There is a directory called test-patch.d off of the directory where test-patch.sh lives.  Inside this directory one may place some bash shell fragments that, if setup with proper functions, will allow for test-patch to call it as necessary. 
+test-patch allows one to add to its basic feature set via plug-ins.  There is a directory called test-patch.d off of the directory where test-patch.sh lives.  Inside this directory one may place some bash shell fragments that, if setup with proper functions, will allow for test-patch to call it as necessary.
 
 
 Every plugin must have one line in order to be recognized:
@@ -123,7 +123,7 @@ Similarly, there are other functions that may be defined during the test-patch r
 * pluginname_postcheckout
     - executed prior to the patch being applied but after the git repository is setup.  This is useful for any early error checking that might need to be done before any heavier work.
 
-* pluginname_preapply  
+* pluginname_preapply
     - executed prior to the patch being applied.  This is useful for any "before"-type data collection for later comparisons
 
 * pluginname_postapply
@@ -143,14 +143,38 @@ Similarly, there are other functions that may be defined during the test-patch r
 
 It is impossible for any general framework to be predictive about what types of special rules any given project may have, especially when it comes to ordering and Maven profiles.  In order to assist non-Hadoop projects, a project `personality` should be added that enacts these custom rules.
 
-A personality is a simple function that allows a project to dictate ordering rules, flags, and profiles on a per-module, per-test run.
+A personality consists of two functions. One that determines which test types to run and another that allows a project to dictate ordering rules, flags, and profiles on a per-module, per-test run.
 
-There can be only **one** personality defined.
+There can be only **one** of each personality function defined.
 
-The function definition is very simple:
+### Test Determination
+
+The `personality_file_tests` function determines which tests to turn on based upon the file name.  It is realtively simple.  For example, to turn on a full suite of tests for Java files:
 
 ```bash
-function personality 
+function personality_file_tests
+{
+  local filename=$1
+
+  if [[ ${filename} =~ \.java$ ]]; then
+    add_test findbugs
+    add_test javac
+    add_test javadoc
+    add_test mvninstall
+    add_test unit
+  fi
+
+}
+```
+
+The `add_test` function is used to activate the standard tests.  Additional plug-ins (such as checkstyle), will get queried on their own.
+
+### Module & Profile Determination
+
+Once the tests are determined, it is now time to pick which modules should get used.  That's the job of the `personality_modules` function.
+
+```bash
+function personality_modules
 {
 
     clear_personality_queue
@@ -162,7 +186,7 @@ function personality
 }
 ```
 
-It takes exactly two parameters `repostatus` and `testtype`.  
+It takes exactly two parameters `repostatus` and `testtype`.
 
 The `repostatus` parameter tells the `personality` function exactly what state the repository is in.  It can only be in one of two states:  `branch` or `patch`.  `branch` means the patch has not been applied.  The `patch` state is after the patch has been applied.
 
@@ -175,7 +199,7 @@ The first is `clear_personality_queue`. This removes the previous test's configu
 The second is `personality_enqueue_module`.  This function takes two parameters.  The first parameter is the name of the module to add to this test's queue.  The second parameter is an option list of additional flags to pass to Maven when processing it. `personality_enqueue_module` may be called as many times as necessary for your project.
 
     NOTE: A module name of . signifies the root of the repository.
-    
+
 For example, let's say your project uses a special configuration to skip unit tests (-DskipTests).  Running unit tests during a javadoc build isn't very interesting. We can write a simple personality check to disable the unit tests:
 
 
@@ -184,13 +208,13 @@ function personality
 {
     local repostatus=$1
     local testtype=$2
-    
+
     if [[ ${testtype} == 'javadoc' ]]; then
         personality_enqueue_module . -DskipTests
         return
     fi
     ...
-    
+
 ```
 
 This function will tell test-patch that when the javadoc test is being run, do the documentation test at the base of the repository and make sure the -DskipTests flag is passed to Maven.
