@@ -12,8 +12,8 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-Hadoop: test-patch
-==================
+test-patch
+==========
 
 * [Purpose](#Purpose)
 * [Pre-requisites](#Pre-requisites)
@@ -27,7 +27,7 @@ As part of Hadoop's commit process, all patches to the source base go through a 
 
 Other projects have adopted a similar methodology after seeing great success in the Hadoop model.  Some have even gone as far as forking Hadoop's precommit code and modifying it to meet their project's needs.
 
-Modifications to Hadoop's versions of test-patch have been made in an attempt to bring together all of these forks under a common code base to help the community as a whole.
+This is a modification to Hadoop's version of test-patch so that we may bring together all of these forks under a common code base to help the community as a whole.
 
 
 ## Pre-requisites

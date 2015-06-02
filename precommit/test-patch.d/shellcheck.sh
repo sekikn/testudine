@@ -65,7 +65,7 @@ function shellcheck_preapply
   big_console_header "shellcheck plugin: prepatch"
 
   if [[ ! -x "${SHELLCHECK}" ]]; then
-    hadoop_error "shellcheck is not available."
+    testudine_error "shellcheck is not available."
     return 0
   fi
 
@@ -138,7 +138,7 @@ function shellcheck_postapply
   big_console_header "shellcheck plugin: postpatch"
 
   if [[ ! -x "${SHELLCHECK}" ]]; then
-    hadoop_error "shellcheck is not available."
+    testudine_error "shellcheck is not available."
     add_jira_table 0 shellcheck "Shellcheck was not available."
     return 0
   fi

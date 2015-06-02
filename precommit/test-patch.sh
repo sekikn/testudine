@@ -36,7 +36,7 @@ function setup_defaults
   # This parameter needs to be kept as an array
   MAVEN_ARGS=()
 
-  PROJECT_NAME=hadoop
+  PROJECT_NAME=testudine
   HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
   JENKINS=false
   BASEDIR=$(pwd)
@@ -112,7 +112,7 @@ function setup_defaults
 ## @stability    stable
 ## @replaceable  no
 ## @param        string
-function hadoop_error
+function testudine_error
 {
   echo "$*" 1>&2
 }
@@ -122,7 +122,7 @@ function hadoop_error
 ## @stability    stable
 ## @replaceable  no
 ## @param        string
-function hadoop_debug
+function testudine_debug
 {
   if [[ -n "${HADOOP_SHELL_SCRIPT_DEBUG}" ]]; then
     echo "[$(date) DEBUG]: $*" 1>&2
@@ -166,7 +166,7 @@ function clock_display
 ## @replaceable  no
 function start_clock
 {
-  hadoop_debug "Start clock"
+  testudine_debug "Start clock"
   TIMER=$(date +"%s")
 }
 
@@ -178,7 +178,7 @@ function stop_clock
 {
   local -r stoptime=$(date +"%s")
   local -r elapsed=$((stoptime-TIMER))
-  hadoop_debug "Stop clock"
+  testudine_debug "Stop clock"
 
   echo ${elapsed}
 }
@@ -191,7 +191,7 @@ function stop_global_clock
 {
   local -r stoptime=$(date +"%s")
   local -r elapsed=$((stoptime-GLOBALTIMER))
-  hadoop_debug "Stop global clock"
+  testudine_debug "Stop global clock"
 
   echo ${elapsed}
 }
@@ -242,7 +242,7 @@ function add_jira_table
   local calctime
   local -r elapsed=$(stop_clock)
 
-  hadoop_debug "add_jira_table ${value} ${subsystem} ${*}"
+  testudine_debug "add_jira_table ${value} ${subsystem} ${*}"
 
   calctime=$(clock_display "${elapsed}")
 
@@ -457,12 +457,12 @@ function write_to_jira
     # shellcheck disable=SC2086
     ${JIRACLI} --comment "$(cat ${commentfile})" \
                -s https://issues.apache.org/jira \
-               -a addcomment -u hadoopqa \
+               -a addcomment -u ${JIRA_USER} \
                -p "${JIRA_PASSWD}" \
                --issue "${ISSUE}"
     retval=$?
     ${JIRACLI} -s https://issues.apache.org/jira \
-               -a logout -u hadoopqa \
+               -a logout -u ${JIRA_USER} \
                -p "${JIRA_PASSWD}"
   fi
   return ${retval}
@@ -595,7 +595,7 @@ function relative_patchdir
 ## @audience     public
 ## @stability    stable
 ## @replaceable  no
-function hadoop_usage
+function testudine_usage
 {
   local -r up=$(echo ${PROJECT_NAME} | tr '[:lower:]' '[:upper:]')
 
@@ -621,7 +621,7 @@ function hadoop_usage
   echo "--offline              Avoid connecting to the Internet"
   echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/${PROJECT_NAME}-test-patch/pid')"
   echo "--plugins=<dir>        A directory of user provided plugins. see test-patch.d for examples (default empty)"
-  echo "--project=<name>       The short name for project currently using test-patch (default 'hadoop')"
+  echo "--project=<name>       The short name for project currently using test-patch (default 'testudine')"
   echo "--resetrepo            Forcibly clean the repo"
   echo "--run-tests            Run all relevant tests below the base directory"
   echo "--skip-system-plugins  Do not load plugins from ${BINDIR}/test-patch.d"
@@ -646,6 +646,7 @@ function hadoop_usage
   echo "--eclipse-home=<path>  Eclipse home directory (default ECLIPSE_HOME environment variable)"
   echo "--jira-cmd=<cmd>       The 'jira' command to use (default 'jira')"
   echo "--jira-password=<pw>   The password for the 'jira' command"
+  echo "--jira-user=<user>     The user for the 'jira' command"
   echo "--mv-patch-dir         Move the patch-dir into the basedir during cleanup."
   echo "--wget-cmd=<cmd>       The 'wget' command to use (default 'wget')"
 }
@@ -709,7 +710,7 @@ function parse_args
         GREP=${i#*=}
       ;;
       --help|-help|-h|help|--h|--\?|-\?|\?)
-        hadoop_usage
+        testudine_usage
         exit 0
       ;;
       --issue-re=*)
@@ -728,10 +729,13 @@ function parse_args
       --jira-password=*)
         JIRA_PASSWD=${i#*=}
       ;;
+      --jira-user=*)
+        JIRA_USER=${i#*=}
+      ;;
       --modulelist=*)
         USER_MODULE_LIST=${i#*=}
         USER_MODULE_LIST=${USER_MODULE_LIST//,/ }
-        hadoop_debug "Manually forcing modules ${USER_MODULE_LIST}"
+        testudine_debug "Manually forcing modules ${USER_MODULE_LIST}"
       ;;
       --mvn-cmd=*)
         MVN=${i#*=}
@@ -760,7 +764,7 @@ function parse_args
       --reexec)
         REEXECED=true
         start_clock
-        add_jira_table 0 reexec "dev-support patch detected."
+        add_jira_table 0 reexec "precommit patch detected."
       ;;
       --resetrepo)
         RESETREPO=true
@@ -775,7 +779,7 @@ function parse_args
         testlist=${i#*=}
         testlist=${testlist//,/ }
         for j in ${testlist}; do
-          hadoop_debug "Manually adding patch test subsystem ${j}"
+          testudine_debug "Manually adding patch test subsystem ${j}"
           add_test "${j}"
         done
       ;;
@@ -805,7 +809,7 @@ function parse_args
   BASEDIR=$(cd -P -- "${BASEDIR}" >/dev/null && pwd -P)
 
   if [[ -z "${PATCH_OR_ISSUE}" ]]; then
-    hadoop_usage
+    testudine_usage
     exit 1
   fi
   if [[ ${JENKINS} == "true" ]] ; then
@@ -857,12 +861,12 @@ function find_pom_dir
 
   dir=$(dirname "$1")
 
-  hadoop_debug "Find pom dir for: ${dir}"
+  testudine_debug "Find pom dir for: ${dir}"
 
   while builtin true; do
     if [[ -f "${dir}/pom.xml" ]];then
       echo "${dir}"
-      hadoop_debug "Found: ${dir}"
+      testudine_debug "Found: ${dir}"
       return
     else
       dir=$(dirname "${dir}")
@@ -940,14 +944,14 @@ function git_checkout
 
   cd "${BASEDIR}"
   if [[ ! -d .git ]]; then
-    hadoop_error "ERROR: ${BASEDIR} is not a git repo."
+    testudine_error "ERROR: ${BASEDIR} is not a git repo."
     cleanup_and_exit 1
   fi
 
   if [[ ${RESETREPO} == "true" ]] ; then
     ${GIT} reset --hard
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git reset is failing"
+      testudine_error "ERROR: git reset is failing"
       cleanup_and_exit 1
     fi
 
@@ -960,18 +964,18 @@ function git_checkout
       # we do, however, want it emptied of all _files_.
       # we need to leave _directories_ in case we are in
       # re-exec mode (which places a directory full of stuff in it)
-      hadoop_debug "Exempting ${exemptdir} from clean"
+      testudine_debug "Exempting ${exemptdir} from clean"
       rm "${PATCH_DIR}/*" 2>/dev/null
       ${GIT} clean -xdf -e "${exemptdir}"
     fi
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git clean is failing"
+      testudine_error "ERROR: git clean is failing"
       cleanup_and_exit 1
     fi
 
     ${GIT} checkout --force "${PATCH_BRANCH_DEFAULT}"
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git checkout --force ${PATCH_BRANCH_DEFAULT} is failing"
+      testudine_error "ERROR: git checkout --force ${PATCH_BRANCH_DEFAULT} is failing"
       cleanup_and_exit 1
     fi
 
@@ -985,14 +989,14 @@ function git_checkout
     if [[ ${OFFLINE} == false ]]; then
       ${GIT} pull --rebase
       if [[ $? != 0 ]]; then
-        hadoop_error "ERROR: git pull is failing"
+        testudine_error "ERROR: git pull is failing"
         cleanup_and_exit 1
       fi
     fi
     # forcibly checkout this branch or git ref
     ${GIT} checkout --force "${PATCH_BRANCH}"
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: git checkout ${PATCH_BRANCH} is failing"
+      testudine_error "ERROR: git checkout ${PATCH_BRANCH} is failing"
       cleanup_and_exit 1
     fi
 
@@ -1001,7 +1005,7 @@ function git_checkout
     if [[ ${OFFLINE} == false ]]; then
       ${GIT} pull --rebase
       if [[ $? != 0 ]]; then
-        hadoop_error "ERROR: git pull is failing"
+        testudine_error "ERROR: git pull is failing"
         cleanup_and_exit 1
       fi
     fi
@@ -1010,9 +1014,9 @@ function git_checkout
 
     status=$(${GIT} status --porcelain)
     if [[ "${status}" != "" && -z ${DIRTY_WORKSPACE} ]] ; then
-      hadoop_error "ERROR: --dirty-workspace option not provided."
-      hadoop_error "ERROR: can't run in a workspace that contains the following modifications"
-      hadoop_error "${status}"
+      testudine_error "ERROR: --dirty-workspace option not provided."
+      testudine_error "ERROR: can't run in a workspace that contains the following modifications"
+      testudine_error "${status}"
       cleanup_and_exit 1
     fi
 
@@ -1044,7 +1048,7 @@ function git_checkout
   add_jira_footer "git revision" "${PATCH_BRANCH} / ${GIT_REVISION}"
 
   if [[ ! -f ${BASEDIR}/pom.xml ]]; then
-    hadoop_error "ERROR: This verison of test-patch.sh only supports Maven-based builds. Aborting."
+    testudine_error "ERROR: This verison of test-patch.sh only supports Maven-based builds. Aborting."
     add_jira_table -1 pre-patch "Unsupported build system."
     output_to_jira 1
     cleanup_and_exit 1
@@ -1106,7 +1110,7 @@ function determine_branch
   local allbranches
   local patchnamechunk
 
-  hadoop_debug "Determine branch"
+  testudine_debug "Determine branch"
 
   # something has already set this, so move on
   if [[ -n ${PATCH_BRANCH} ]]; then
@@ -1125,12 +1129,12 @@ function determine_branch
   allbranches=$(${GIT} branch -r | tr -d ' ' | ${SED} -e s,origin/,,g)
 
   for j in "${PATCHURL}" "${PATCH_OR_ISSUE}"; do
-    hadoop_debug "Determine branch: starting with ${j}"
+    testudine_debug "Determine branch: starting with ${j}"
     # shellcheck disable=SC2016
     patchnamechunk=$(echo "${j}" | ${AWK} -F/ '{print $NF}')
 
     # ISSUE.branch.##.patch
-    hadoop_debug "Determine branch: ISSUE.branch.##.patch"
+    testudine_debug "Determine branch: ISSUE.branch.##.patch"
     PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f2 -d. )
     verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
     if [[ $? == 0 ]]; then
@@ -1138,7 +1142,7 @@ function determine_branch
     fi
 
     # ISSUE-branch-##.patch
-    hadoop_debug "Determine branch: ISSUE-branch-##.patch"
+    testudine_debug "Determine branch: ISSUE-branch-##.patch"
     PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | cut -f1,2 -d-)
     verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
     if [[ $? == 0 ]]; then
@@ -1146,7 +1150,7 @@ function determine_branch
     fi
 
     # ISSUE-##.patch.branch
-    hadoop_debug "Determine branch: ISSUE-##.patch.branch"
+    testudine_debug "Determine branch: ISSUE-##.patch.branch"
     # shellcheck disable=SC2016
     PATCH_BRANCH=$(echo "${patchnamechunk}" | ${AWK} -F. '{print $NF}')
     verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
@@ -1155,7 +1159,7 @@ function determine_branch
     fi
 
     # ISSUE-branch.##.patch
-    hadoop_debug "Determine branch: ISSUE-branch.##.patch"
+    testudine_debug "Determine branch: ISSUE-branch.##.patch"
     # shellcheck disable=SC2016
     PATCH_BRANCH=$(echo "${patchnamechunk}" | cut -f3- -d- | ${AWK} -F. '{print $(NF-2)}' 2>/dev/null)
     verify_valid_branch "${allbranches}" "${PATCH_BRANCH}"
@@ -1180,7 +1184,7 @@ function determine_issue
   local patchnamechunk
   local maybeissue
 
-  hadoop_debug "Determine issue"
+  testudine_debug "Determine issue"
 
   # we can shortcut jenkins
   if [[ ${JENKINS} == true ]]; then
@@ -1211,13 +1215,13 @@ function add_test
 {
   local testname=$1
 
-  hadoop_debug "Testing against ${testname}"
+  testudine_debug "Testing against ${testname}"
 
   if [[ -z ${NEEDED_TESTS} ]]; then
-    hadoop_debug "Setting tests to ${testname}"
+    testudine_debug "Setting tests to ${testname}"
     NEEDED_TESTS=${testname}
   elif [[ ! ${NEEDED_TESTS} =~ ${testname} ]] ; then
-    hadoop_debug "Adding ${testname}"
+    testudine_debug "Adding ${testname}"
     NEEDED_TESTS="${NEEDED_TESTS} ${testname}"
   fi
 }
@@ -1250,17 +1254,17 @@ function determine_needed_tests
 
   for i in ${CHANGED_FILES}; do
     if [[ ${i} =~ src/main/webapp ]]; then
-      hadoop_debug "tests/webapp: ${i}"
+      testudine_debug "tests/webapp: ${i}"
     elif [[ ${i} =~ \.sh
          || ${i} =~ \.cmd
          ]]; then
-      hadoop_debug "tests/shell: ${i}"
+      testudine_debug "tests/shell: ${i}"
     elif [[ ${i} =~ \.md$
          || ${i} =~ \.md\.vm$
          || ${i} =~ src/site
          || ${i} =~ src/main/docs
          ]]; then
-      hadoop_debug "tests/site: ${i}"
+      testudine_debug "tests/site: ${i}"
       add_test site
     elif [[ ${i} =~ \.c$
          || ${i} =~ \.cc$
@@ -1271,7 +1275,7 @@ function determine_needed_tests
          || ${i} =~ \.cmake$
          || ${i} =~ CMakeLists.txt
          ]]; then
-      hadoop_debug "tests/units: ${i}"
+      testudine_debug "tests/units: ${i}"
       add_test javac
       add_test mvninstall
       add_test unit
@@ -1281,9 +1285,9 @@ function determine_needed_tests
          ]]; then
       if [[ ${i} =~ src/main/bin
          || ${i} =~ src/main/sbin ]]; then
-        hadoop_debug "tests/shell: ${i}"
+        testudine_debug "tests/shell: ${i}"
       else
-        hadoop_debug "tests/javadoc+units: ${i}"
+        testudine_debug "tests/javadoc+units: ${i}"
         add_test javac
         add_test javadoc
         add_test mvninstall
@@ -1315,7 +1319,7 @@ function determine_needed_tests
 function locate_patch
 {
   local notSureIfPatch=false
-  hadoop_debug "locate patch"
+  testudine_debug "locate patch"
 
   if [[ -f ${PATCH_OR_ISSUE} ]]; then
     PATCH_FILE="${PATCH_OR_ISSUE}"
@@ -1327,16 +1331,16 @@ function locate_patch
       ${WGET} -q -O "${PATCH_DIR}/jira" "http://issues.apache.org/jira/browse/${PATCH_OR_ISSUE}"
 
       if [[ $? != 0 ]];then
-        hadoop_error "ERROR: Unable to determine what ${PATCH_OR_ISSUE} may reference."
+        testudine_error "ERROR: Unable to determine what ${PATCH_OR_ISSUE} may reference."
         cleanup_and_exit 1
       fi
 
       if [[ $(${GREP} -c 'Patch Available' "${PATCH_DIR}/jira") == 0 ]] ; then
         if [[ ${JENKINS} == true ]]; then
-          hadoop_error "ERROR: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
+          testudine_error "ERROR: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
           cleanup_and_exit 1
         else
-          hadoop_error "WARNING: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
+          testudine_error "WARNING: ${PATCH_OR_ISSUE} is not \"Patch Available\"."
         fi
       fi
 
@@ -1352,7 +1356,7 @@ function locate_patch
     add_jira_footer "Patch URL" "${PATCHURL}"
     ${WGET} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
     if [[ $? != 0 ]];then
-      hadoop_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
+      testudine_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
       cleanup_and_exit 1
     fi
     PATCH_FILE="${PATCH_DIR}/patch"
@@ -1363,17 +1367,17 @@ function locate_patch
     if [[ $? == 0 ]] ; then
       echo "Patch file ${PATCH_FILE} copied to ${PATCH_DIR}"
     else
-      hadoop_error "ERROR: Could not copy ${PATCH_FILE} to ${PATCH_DIR}"
+      testudine_error "ERROR: Could not copy ${PATCH_FILE} to ${PATCH_DIR}"
       cleanup_and_exit 1
     fi
   fi
   if [[ ${notSureIfPatch} == "true" ]]; then
     guess_patch_file "${PATCH_DIR}/patch"
     if [[ $? != 0 ]]; then
-      hadoop_error "ERROR: ${PATCHURL} is not a patch file."
+      testudine_error "ERROR: ${PATCHURL} is not a patch file."
       cleanup_and_exit 1
     else
-      hadoop_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
+      testudine_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
       add_jira_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
     fi
   fi
@@ -1390,15 +1394,15 @@ function guess_patch_file
   local patch=$1
   local fileOutput
 
-  hadoop_debug "Trying to guess is ${patch} is a patch file."
+  testudine_debug "Trying to guess is ${patch} is a patch file."
   fileOutput=$("${FILE}" "${patch}")
   if [[ $fileOutput =~ \ diff\  ]]; then
-    hadoop_debug "file magic says it's a diff."
+    testudine_debug "file magic says it's a diff."
     return 0
   fi
   fileOutput=$(head -n 1 "${patch}" | "${EGREP}" "^(From [a-z0-9]* Mon Sep 17 00:00:00 2001)|(diff .*)|(Index: .*)$")
   if [[ $? == 0 ]]; then
-    hadoop_debug "first line looks like a patch file."
+    testudine_debug "first line looks like a patch file."
     return 0
   fi
   return 1
@@ -1464,17 +1468,17 @@ function check_reexec
     return
   fi
 
-  if [[ ! ${CHANGED_FILES} =~ dev-support/test-patch
-      || ${CHANGED_FILES} =~ dev-support/smart-apply ]] ; then
+  if [[ ! ${CHANGED_FILES} =~ precommit/test-patch
+      || ${CHANGED_FILES} =~ precommit/smart-apply ]] ; then
     return
   fi
 
-  big_console_header "dev-support patch detected"
+  big_console_header "precommit patch detected"
 
   if [[ ${RESETREPO} == false ]]; then
     ((RESULT = RESULT + 1))
-    hadoop_debug "can't destructively change the working directory. run with '--resetrepo' please. :("
-    add_jira_table -1 dev-support "Couldn't test dev-support changes because we aren't configured to destructively change the working directory."
+    testudine_debug "can't destructively change the working directory. run with '--resetrepo' please. :("
+    add_jira_table -1 precommit "Couldn't test precommit changes because we aren't configured to destructively change the working directory."
     return
   fi
 
@@ -1495,13 +1499,13 @@ function check_reexec
   fi
 
   cd "${CWD}"
-  mkdir -p "${PATCH_DIR}/dev-support-test"
-  cp -pr "${BASEDIR}"/dev-support/test-patch* "${PATCH_DIR}/dev-support-test"
-  cp -pr "${BASEDIR}"/dev-support/smart-apply* "${PATCH_DIR}/dev-support-test"
+  mkdir -p "${PATCH_DIR}/precommit-test"
+  cp -pr "${BASEDIR}"/precommit/test-patch* "${PATCH_DIR}/precommit-test"
+  cp -pr "${BASEDIR}"/precommit/smart-apply* "${PATCH_DIR}/precommit-test"
 
   big_console_header "exec'ing test-patch.sh now..."
 
-  exec "${PATCH_DIR}/dev-support-test/test-patch.sh" \
+  exec "${PATCH_DIR}/precommit-test/test-patch.sh" \
     --reexec \
     --branch="${PATCH_BRANCH}" \
     --patch-dir="${PATCH_DIR}" \
@@ -1651,7 +1655,7 @@ function mvn_modules_worker
 ## @replaceable  no
 function clear_personality_queue
 {
-  hadoop_debug "Personality: clear queue"
+  testudine_debug "Personality: clear queue"
   MODCOUNT=0
 }
 
@@ -1663,7 +1667,7 @@ function clear_personality_queue
 ## @param        profiles/flags/etc
 function personality_enqueue_module
 {
-  hadoop_debug "Personality: enqueue $*"
+  testudine_debug "Personality: enqueue $*"
   local module=$1
   shift
 
@@ -1815,7 +1819,7 @@ function check_author
 
   big_console_header "Checking there are no @author tags in the patch."
 
-  if [[ ${CHANGED_FILES} =~ dev-support/test-patch ]]; then
+  if [[ ${CHANGED_FILES} =~ precommit/test-patch ]]; then
     echo "Skipping @author checks as test-patch has been patched."
     add_jira_table 0 @author "Skipping @author checks as test-patch has been patched."
     return 0
@@ -2845,7 +2849,7 @@ function cleanup_and_exit
     # since it told us to put it there!
     relative_patchdir >/dev/null
     if [[ $? == 1 ]]; then
-      hadoop_debug "mv ${PATCH_DIR} ${BASEDIR}"
+      testudine_debug "mv ${PATCH_DIR} ${BASEDIR}"
       mv "${PATCH_DIR}" "${BASEDIR}"
     fi
   fi
@@ -2868,7 +2872,7 @@ function postcheckout
   do
     verify_patchdir_still_exists
 
-    hadoop_debug "Running ${routine}"
+    testudine_debug "Running ${routine}"
     ${routine}
 
     (( RESULT = RESULT + $? ))
@@ -2884,7 +2888,7 @@ function postcheckout
 
     if declare -f ${plugin}_postcheckout >/dev/null 2>&1; then
 
-      hadoop_debug "Running ${plugin}_postcheckout"
+      testudine_debug "Running ${plugin}_postcheckout"
       #shellcheck disable=SC2086
       ${plugin}_postcheckout
 
@@ -2912,7 +2916,7 @@ function preapply
   do
     verify_patchdir_still_exists
 
-    hadoop_debug "Running ${routine}"
+    testudine_debug "Running ${routine}"
     ${routine}
 
     (( RESULT = RESULT + $? ))
@@ -2923,7 +2927,7 @@ function preapply
 
     if declare -f ${plugin}_preapply >/dev/null 2>&1; then
 
-      hadoop_debug "Running ${plugin}_preapply"
+      testudine_debug "Running ${plugin}_preapply"
       #shellcheck disable=SC2086
       ${plugin}_preapply
 
@@ -2957,7 +2961,7 @@ function postapply
   for routine in check_patch_javadoc check_apachelicense check_site
   do
     verify_patchdir_still_exists
-    hadoop_debug "Running ${routine}"
+    testudine_debug "Running ${routine}"
     $routine
 
     (( RESULT = RESULT + $? ))
@@ -2967,7 +2971,7 @@ function postapply
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists
     if declare -f ${plugin}_postapply >/dev/null 2>&1; then
-      hadoop_debug "Running ${plugin}_postapply"
+      testudine_debug "Running ${plugin}_postapply"
       #shellcheck disable=SC2086
       ${plugin}_postapply
       (( RESULT = RESULT + $? ))
@@ -2987,7 +2991,7 @@ function postinstall
   for routine in check_mvn_eclipse check_findbugs
   do
     verify_patchdir_still_exists
-    hadoop_debug "Running ${routine}"
+    testudine_debug "Running ${routine}"
     ${routine}
     (( RESULT = RESULT + $? ))
   done
@@ -2995,7 +2999,7 @@ function postinstall
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists
     if declare -f ${plugin}_postinstall >/dev/null 2>&1; then
-      hadoop_debug "Running ${plugin}_postinstall"
+      testudine_debug "Running ${plugin}_postinstall"
       #shellcheck disable=SC2086
       ${plugin}_postinstall
       (( RESULT = RESULT + $? ))
@@ -3024,7 +3028,7 @@ function runtests
   for plugin in ${PLUGINS}; do
     verify_patchdir_still_exists
     if declare -f ${plugin}_tests >/dev/null 2>&1; then
-      hadoop_debug "Running ${plugin}_tests"
+      testudine_debug "Running ${plugin}_tests"
       #shellcheck disable=SC2086
       ${plugin}_tests
       (( RESULT = RESULT + $? ))
@@ -3049,12 +3053,12 @@ function importplugins
   fi
 
   if [[ -n "${USER_PLUGIN_DIR}" && -d "${USER_PLUGIN_DIR}" ]]; then
-    hadoop_debug "Loading user provided plugins from ${USER_PLUGIN_DIR}"
+    testudine_debug "Loading user provided plugins from ${USER_PLUGIN_DIR}"
     files=("${files[@]}" ${USER_PLUGIN_DIR}/*.sh)
   fi
 
   for i in "${files[@]}"; do
-    hadoop_debug "Importing ${i}"
+    testudine_debug "Importing ${i}"
     . "${i}"
   done
 }

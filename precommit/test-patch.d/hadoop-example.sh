@@ -25,7 +25,7 @@
 #  local tools_modules
 #  local passed_modules=${CHANGED_MODULES}
 #
-#  hadoop_debug "hmm: starting list: ${passed_modules}"
+#  testudine_debug "hmm: starting list: ${passed_modules}"
 #
 #  # if one of our modules is ., then shortcut:
 #  # ignore the rest and just set it to everything.
@@ -38,13 +38,13 @@
 #  # let's remove child modules if we're going to
 #  # touch their parent
 #  for module in ${CHANGED_MODULES}; do
-#    hadoop_debug "Stripping ${module}"
+#    testudine_debug "Stripping ${module}"
 #    # shellcheck disable=SC2086
 #    passed_modules=$(echo ${passed_modules} | tr ' ' '\n' | ${GREP} -v ${module}/ )
 #  done
 #
 #  for module in ${passed_modules}; do
-#    hadoop_debug "Personality ordering ${module}"
+#    testudine_debug "Personality ordering ${module}"
 #    if [[ ${module} == hadoop-hdfs-project* ]]; then
 #      hdfs_modules="${hdfs_modules} ${module}"
 #      need_common=1
@@ -66,7 +66,7 @@
 #      ordered_modules="hadoop-common-project/hadoop-common ${ordered_modules}"
 #  fi
 #
-#  hadoop_debug "hmm: ${ordered_modules}"
+#  testudine_debug "hmm: ${ordered_modules}"
 #  HADOOP_MODULES=${ordered_modules}
 #}
 #
@@ -207,7 +207,7 @@
 #  local fn
 #  local i
 #
-#  hadoop_debug "Personality: ${repostatus} ${testtype}"
+#  testudine_debug "Personality: ${repostatus} ${testtype}"
 #
 #  clear_personality_queue
 #
