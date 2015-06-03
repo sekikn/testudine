@@ -321,6 +321,8 @@ function run_image
   local dockerfilerev
   local baseimagename
 
+  set +x
+
   dockerfilerev=$(cd "${BINDIR}" \
       && git log -n 1 "Dockerfile" 2>/dev/null \
       | head -1 \

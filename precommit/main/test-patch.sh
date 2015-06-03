@@ -648,7 +648,7 @@ function docker_launch
   export STARTBINDIR=${BINDIR}
   export PROJECT_NAME
   cd "${BASEDIR}"
-  exec bash "${BINDIR}/test-patch-docker/test-patch-docker.sh" \
+  exec bash "${PATCH_DIR}/precommit-test/test-patch-docker/test-patch-docker.sh" \
      --dockerversion="${dockerversion}" \
      --java-home="${JAVA_HOME}" \
      --patch-dir="${patchdir}" \
