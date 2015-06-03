@@ -178,7 +178,6 @@ function personality_modules
         personality_enqueue_module . "${extra}"
         return
       fi
-      return
       ;;
     releaseaudit)
       # this is very fast and provides the full path if we do it from
