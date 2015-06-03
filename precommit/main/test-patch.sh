@@ -239,7 +239,6 @@ function add_jira_table
   local subsystem=$2
   shift 2
 
-  local color
   local calctime
   local -r elapsed=$(stop_clock)
 
@@ -247,28 +246,16 @@ function add_jira_table
 
   calctime=$(clock_display "${elapsed}")
 
-  case ${value} in
-    1|+1)
-      value="+1"
-      color="green"
-    ;;
-    -1)
-      color="red"
-    ;;
-    0)
-      color="blue"
-    ;;
-    null)
-    ;;
-  esac
-
-  if [[ -z ${color} ]]; then
-    JIRA_COMMENT_TABLE[${JTC}]="|  | ${subsystem} | | ${*:-} |"
-    JTC=$(( JTC+1 ))
-  else
-    JIRA_COMMENT_TABLE[${JTC}]="| {color:${color}}${value}{color} | ${subsystem} | ${calctime} | $* |"
-    JTC=$(( JTC+1 ))
+  if [[ ${value} == "1" ]]; then
+    value="+1"
   fi
+
+  if [[ -z ${value} ]]; then
+    JIRA_COMMENT_TABLE[${JTC}]="|  | ${subsystem} | | ${*:-} |"
+  else
+    JIRA_COMMENT_TABLE[${JTC}]="| ${value} | ${subsystem} | ${calctime} | $* |"
+  fi
+  ((JTC=JTC+1))
 }
 
 ## @description  Put the opening environment information at the bottom
@@ -371,29 +358,6 @@ function big_console_header
   echo "============================================================================"
   echo "============================================================================"
   printf "\n\n"
-}
-
-## @description  Remove {color} tags from a string
-## @audience     public
-## @stability    stable
-## @replaceable  no
-## @param        string
-## @return       string
-function colorstripper
-{
-  local string=$1
-  shift 1
-
-  local green=""
-  local white=""
-  local red=""
-  local blue=""
-
-  echo "${string}" | \
-  ${SED} -e "s,{color:red},${red},g" \
-         -e "s,{color:green},${green},g" \
-         -e "s,{color:blue},${blue},g" \
-         -e "s,{color},${white},g"
 }
 
 ## @description  Find the largest size of a column of an array
@@ -2748,7 +2712,6 @@ function output_to_console
   until [[ $i -eq ${#JIRA_COMMENT_TABLE[@]} ]]; do
     ourstring=$(echo "${JIRA_COMMENT_TABLE[${i}]}" | tr -s ' ')
     vote=$(echo "${ourstring}" | cut -f2 -d\|)
-    vote=$(colorstripper "${vote}")
     subs=$(echo "${ourstring}"  | cut -f3 -d\|)
     ela=$(echo "${ourstring}" | cut -f4 -d\|)
     comment=$(echo "${ourstring}"  | cut -f5 -d\|)
@@ -2803,6 +2766,12 @@ function output_to_jira
   local i
   local commentfile=${PATCH_DIR}/commentfile
   local comment
+  local vote
+  local ourstring
+  local ela
+  local subs
+  local color
+  local comment
 
   rm "${commentfile}" 2>/dev/null
 
@@ -2834,7 +2803,43 @@ function output_to_jira
 
   i=0
   until [[ $i -eq ${#JIRA_COMMENT_TABLE[@]} ]]; do
-    printf "%s\n" "${JIRA_COMMENT_TABLE[${i}]}" >> "${commentfile}"
+    ourstring=$(echo "${JIRA_COMMENT_TABLE[${i}]}" | tr -s ' ')
+    vote=$(echo "${ourstring}" | cut -f2 -d\| | tr -d ' ')
+    subs=$(echo "${ourstring}"  | cut -f3 -d\|)
+    ela=$(echo "${ourstring}" | cut -f4 -d\|)
+    comment=$(echo "${ourstring}"  | cut -f5 -d\|)
+
+    # summary line
+    if [[ -z ${vote}
+      && -n ${ela} ]]; then
+      color="black"
+    elif [[ -z ${vote} ]]; then
+      # keep same color
+      true
+    else
+      # new vote line
+      case ${vote} in
+        1|"+1")
+          color="green"
+        ;;
+        -1)
+          color="red"
+        ;;
+        0)
+          color="blue"
+        ;;
+        *)
+          color="black"
+        ;;
+      esac
+    fi
+
+    printf "| {color:%s}%s{color} | {color:%s}%s{color} | {color:%s}%s{color} | {color:%s}%s{color} |\n" \
+      "${color}" "${vote}" \
+      "${color}" "${subs}" \
+      "${color}" "${ela}" \
+      "${color}" "${comment}" \
+      >> "${commentfile}"
     ((i=i+1))
   done
 

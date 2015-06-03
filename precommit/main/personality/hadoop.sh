@@ -188,7 +188,7 @@ function personality_modules
     unit)
       if [[ ${TEST_PARALLEL} == "true" ]] ; then
         extra="-Pparallel-tests"
-        if [[ -z ${TEST_THREADS:-} ]]; then
+        if [[ -n ${TEST_THREADS:-} ]]; then
           extra="${extra} -DtestsThreadCount=${TEST_THREADS}"
         fi
       fi
