@@ -281,11 +281,9 @@ function open_jira_footer
   # shellcheck disable=SC2016
   local -r javaversion=$("${JAVA_HOME}/bin/java" -version 2>&1 | head -1 | ${AWK} '{print $NF}' | tr -d \")
   local -r unamea=$(uname -a)
-  local -r protoc=$(protoc --version) 2>/dev/null
 
   add_jira_footer "Java" "${javaversion}"
   add_jira_footer "uname" "${unamea}"
-  add_jira_footer "protoc" "${protoc}"
 
   if [[ -n ${PERSONALITY} ]]; then
     add_jira_footer "Personality" ${PERSONALITY}
@@ -630,7 +628,7 @@ function docker_launch
   mkdir -p "${PATCH_DIR}/precommit-test"
   cp -pr "${BINDIR}"/* "${PATCH_DIR}/precommit-test"
   cat ${DOCKERFILE} \
-      "${BINDIR}/Dockerfile-endstub" \
+      "${BINDIR}/test-patch-docker/Dockerfile-endstub" \
       > "${PATCH_DIR}/precommit-test/test-patch-docker/Dockerfile"
 
   client=$(docker version | grep 'Client version' | cut -f2 -d: | tr -d ' ')
