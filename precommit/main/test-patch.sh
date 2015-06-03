@@ -2061,7 +2061,7 @@ function count_javadoc_warns
   local warningfile=$1
 
   #shellcheck disable=SC2016,SC2046
-  return $(${EGREP} "^[0-9]+ warnings$" "${warningfile}" | ${AWK} '{sum+=$1} END {print sum}')
+  return $(${EGREP} "^[0-9]+ warnings?$" "${warningfile}" | ${AWK} '{sum+=$1} END {print sum}')
 }
 
 ## @description  Count and compare the number of JavaDoc warnings pre- and post- patch
