@@ -323,21 +323,8 @@ function run_image
   local dockerfilerev
   local baseimagename
 
-  dockerfilerev=$(cd "${BINDIR}" \
-      && git log -n 1 "Dockerfile" 2>/dev/null \
-      | head -1 \
-      | awk '{print $2}' \
-      | cut -c1-8)
-
-  # if we were given a dockerfile that isn't part of
-  # the repo, then just use a date + the hour to
-  # give some level of caching
-  if [[ -z ${dockerfilerev} ]]; then
-    dockerfilerev=$(date "+%F-%H")
-    dockerfilerev="date${dockerfilerev}"
-  else
-    dockerfilerev="${dockerfilerev}"
-  fi
+  dockerfilerev=$(date "+%F")
+  dockerfilerev="date${dockerfilerev}"
 
   baseimagename="test-patch-base-${PROJECT_NAME}-${dockerfilerev}"
 
