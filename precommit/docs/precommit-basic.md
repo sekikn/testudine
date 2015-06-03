@@ -64,7 +64,7 @@ This command will execute basic patch testing against a patch file stored in fil
 
 ```bash
 $ cd <your repo>
-$ dev-support/test-patch.sh --dirty-workspace <filename>
+$ dev-support/test-patch.sh --dirty-workspace --project=projectname <filename>
 ```
 
 The `--dirty-workspace` flag tells test-patch that the repository is not clean and it is ok to continue.  This version command does not run the unit tests.
@@ -92,4 +92,31 @@ We used two new options here.  --basedir sets the location of the repository to 
 
 After the tests have run, there is a directory that contains all of the test-patch related artifacts.  This is generally referred to as the patchprocess directory.  By default, test-patch tries to make something off of /tmp to contain this content.  Using the `--patchdir` command, one can specify exactly which directory to use.  This is helpful for automated precommit testing so that the Jenkins or other automated workflow system knows where to look to gather up the output.
 
+## Provinding Patch Files
+
+It is a fairly common practice within the Apache community to use Apache's JIRA instance to store potential patches.  As a result, test-patch supports providing just a JIRA issue number.  test-patch will find the *last* attachment, download it, then process it.
+
+For example:
+
+```bash
+$ test-patch.sh (other options) HADOOP-9905
+```
+
+... will process the patch file associated with this JIRA issue.
+
+
+A new practice is to use a service such as GitHub and its Pull Request (PR) feature.  Luckily, test-patch supports URLs and many services like GitHub provide ways to provide unified diffs via URLs.
+
+For example:
+
+```bash
+$ test-patch.sh (other options) https://github.com/apache/flink/pull/773.patch
+```
+
+... will grab a unified diff of PR #773 and process it.
+
+## In Closing
+
 test-patch has many other features and command line options for the basic user.  Many of these are self-explanatory.  To see the list of options, run test-patch.sh without any options or with --help.
+
+
