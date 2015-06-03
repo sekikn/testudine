@@ -20,18 +20,43 @@ HOW_TO_CONTRIBUTE=""
 
 add_plugin flinklib
 
+function fliblib_filefilter
+{
+  local filename=$1
+
+  if [[ ${filename} =~ \.java$
+    || ${filename} =~ \.scala$ ]]; then
+    add_test flinklib
+  fi
+}
+
+function flinklib_count
+{
+  find "${BASEDIR}" \
+    | ${GREP} \"\/lib\/\" \
+    | ${GREP} -v \"_qa_workdir\" \
+    | wc -l
+}
+
 function flinklib_preapply
 {
   start_clock
   big_console_header "${PATCH_BRANCH} flink library dependencies"
 
+  verify_needed_test flinklib
+  if [[ $? == 0 ]]; then
+    echo "Patch does not need flinklib testing."
+    return 0
+  fi
+
+  pushd "${BASEDIR}" >/dev/null
   echo_and_redirect "${PATCH_DIR}/branch-flinklib-root.txt" \
-     ${MVN} "${MAVEN_ARGS[@]}" clean package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
+     ${MVN} "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
   if [[ $? != 0 ]]; then
      add_jira_table -1 flinklib "Unable to determine flink libs in ${PATCH_BRANCH}."
   fi
-  FLINK_PRE_LIB_FILES="find ${BASEDIR} | ${GREP} \"\/lib\/\" | ${GREP} -v \"_qa_workdir\" | wc -l"
-
+  FLINK_PRE_LIB_FILES=$(flinklib_count)
+  popd >/dev/null
 }
 
 function flinklib_postapply
@@ -39,9 +64,18 @@ function flinklib_postapply
   start_clock
   big_console_header "Patch flink library dependencies"
 
+  verify_needed_test flinklib
+  if [[ $? == 0 ]]; then
+    echo "Patch does not need flinklib testing."
+    return 0
+  fi
+
+  pushd "${BASEDIR}" >/dev/null
   echo_and_redirect "${PATCH_DIR}/patch-flinklib-root.txt" \
-     ${MVN} "${MAVEN_ARGS[@]}" clean package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
-  FLINK_POST_LIB_FILES="find ${BASEDIR} | ${GREP} \"\/lib\/\" | ${GREP} -v \"_qa_workdir\" | wc -l"
+     ${MVN} "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
+  FLINK_POST_LIB_FILES=$(flinklib_count)
+  popd >/dev/null
+
 
 	if [[ "${FLINK_POST_LIB_FILES}" -gt "${FLINK_PRE_LIB_FILES}" ]]; then
     add_jira_table -1 flinklib "Patch increases lib folder dependencies from " \

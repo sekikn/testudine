@@ -18,8 +18,6 @@ add_plugin checkstyle
 
 CHECKSTYLE_TIMER=0
 
-# if it ends in an explicit .sh, then this is shell code.
-# if it doesn't have an extension, we assume it is shell code too
 function checkstyle_filefilter
 {
   local filename=$1
