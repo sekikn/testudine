@@ -174,6 +174,10 @@ function personality_modules
     ;;
     mvninstall)
       extra="-DskipTests"
+      if [[ ${repostatus} == branch ]]; then
+        personality_enqueue_module . "${extra}"
+        return
+      fi
       # mvn install breaks in lots of modules for a variety of reasons
       # if you do them per-module.  So just force it to be all of them.
       # personality_enqueue_module . "-DskipTests"

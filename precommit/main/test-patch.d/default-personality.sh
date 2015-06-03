@@ -26,9 +26,15 @@ function personality_modules
 
   clear_personality_queue
 
+  if [[ ${repostatus} == branch
+     && ${testype} == mvninstall ]];then
+     personality_enqueue_module .
+     return
+   fi
+
   for module in ${CHANGED_MODULES}; do
     # shellcheck disable=SC2086
-    personality_enqueue_module ${module} 
+    personality_enqueue_module ${module}
   done
 }
 
