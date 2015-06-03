@@ -49,12 +49,6 @@ function personality_modules
       return
     ;;
     unit)
-      if [[ ${TEST_PARALLEL} == "true" ]] ; then
-        extra="-Pparallel-tests"
-        if [[ -n ${TEST_THREADS:-} ]]; then
-          extra="${extra} -DtestsThreadCount=${TEST_THREADS}"
-        fi
-      fi
     ;;
     *)
       extra="-DskipTests"
