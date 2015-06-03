@@ -16,6 +16,7 @@
 
 PATCH_BRANCH_DEFAULT=master
 ISSUE_RE='^TEZ-[0-9]+$'
+HOW_TO_CONTRIBUTE="https://cwiki.apache.org/confluence/display/TEZ/How+to+Contribute+to+Tez"
 
 function personality_modules
 {
