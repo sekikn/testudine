@@ -651,7 +651,7 @@ function testudine_usage
   echo "--java-home=<path>     Set JAVA_HOME (In Docker mode, this should be local to the image)"
   echo "--modulelist=<list>    Specify additional modules to test (comma delimited)"
   echo "--offline              Avoid connecting to the Internet"
-  echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/${PROJECT_NAME}-test-patch/pid')"
+  echo "--patch-dir=<dir>      The directory for working and output files (default '/tmp/test-patch-${PROJECT_NAME}/pid')"
   echo "--personality=<file>   The personality file to load"
   echo "--plugins=<dir>        A directory of user provided plugins. see test-patch.d for examples (default empty)"
   echo "--project=<name>       The short name for project currently using test-patch (default 'testudine')"
@@ -899,7 +899,7 @@ function parse_args
   if [[ -n ${USER_PATCH_DIR} ]]; then
     PATCH_DIR="${USER_PATCH_DIR}"
   else
-    PATCH_DIR=/tmp/${PROJECT_NAME}-test-patch/$$
+    PATCH_DIR=/tmp/test-patch-${PROJECT_NAME}/$$
   fi
 
   cd "${CWD}"
@@ -1849,13 +1849,13 @@ function precheck_without_patch
 {
   local result=0
 
-  precheck_javac
+  precheck_mvninstall
 
   if [[ $? -gt 0 ]]; then
     ((result = result +1 ))
   fi
 
-  precheck_mvninstall
+  precheck_javac
 
   if [[ $? -gt 0 ]]; then
     ((result = result +1 ))
@@ -2192,7 +2192,7 @@ function precheck_mvninstall
   fi
 
   personality_modules branch mvninstall
-  mvn_modules_worker branch mvninstall install -Dmaven.javadoc.skip=true
+  mvn_modules_worker branch mvninstall clean install -Dmaven.javadoc.skip=true
   result=$?
   mvn_modules_message branch mvninstall true
   if [[ ${result} != 0 ]]; then
