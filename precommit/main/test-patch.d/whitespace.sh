@@ -26,7 +26,9 @@ function whitespace_postapply
 
   pushd "${BASEDIR}" >/dev/null
   for j in ${CHANGED_FILES}; do
-    ${GREP} -nHE '[[:blank:]]$' "./${j}" | ${GREP} -f "${GITDIFFLINES}" >> "${PATCH_DIR}/whitespace.txt"
+    if [[ -f ${j} ]]; then
+      ${GREP} -nHE '[[:blank:]]$' "./${j}" | ${GREP} -f "${GITDIFFLINES}" >> "${PATCH_DIR}/whitespace.txt"
+    fi
   done
 
   # shellcheck disable=SC2016
