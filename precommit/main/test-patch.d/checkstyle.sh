@@ -112,7 +112,7 @@ function checkstyle_preapply
     return 0
   fi
 
-  personality branch checkstyle
+  personality_modules branch checkstyle
   checkstyle_mvnrunner branch
   result=$?
   mvn_modules_message branch checkstyle
@@ -182,7 +182,7 @@ function checkstyle_postapply
     return 0
   fi
 
-  personality patch checkstyle
+  personality_modules patch checkstyle
   checkstyle_mvnrunner patch
   result=$?
 
