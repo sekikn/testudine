@@ -1586,7 +1586,7 @@ function mvn_modules_message
   shift 2
   local i=0
   local repo
-  local goodtime
+  local goodtime=0
   local failure=false
 
   if [[ ${repostatus} == branch ]]; then

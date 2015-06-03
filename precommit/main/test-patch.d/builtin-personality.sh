@@ -14,18 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function personality_modules
+function builtin_personality_modules
 {
   local repostatus=$1
   local testtype=$2
 
   local module
 
-  testudine_debug "Using default personality_modules"
+  testudine_debug "Using builtin personality_modules"
   testudine_debug "Personality: ${repostatus} ${testtype}"
 
   clear_personality_queue
 
+  # this always makes sure the local repo has a fresh
+  # copy of everything per pom rules.
   if [[ ${repostatus} == branch
      && ${testype} == mvninstall ]];then
      personality_enqueue_module .
@@ -38,11 +40,16 @@ function personality_modules
   done
 }
 
-function personality_file_tests
+function personality_modules
+{
+  builtin_personality_modules "$@"
+}
+
+function builtin_personality_file_tests
 {
   local filename=$1
 
-  testudine_debug "Using default personality_file_tests"
+  testudine_debug "Using builtin personality_file_tests"
 
   if [[ ${filename} =~ src/main/webapp ]]; then
     testudine_debug "tests/webapp: ${filename}"
@@ -72,6 +79,7 @@ function personality_file_tests
     add_test unit
   elif [[ ${filename} =~ pom.xml$
        || ${filename} =~ \.java$
+       || ${filename} =~ \.scala$
        || ${filename} =~ src/main
        ]]; then
     if [[ ${filename} =~ src/main/bin
@@ -89,4 +97,9 @@ function personality_file_tests
   if [[ ${filename} =~ \.java$ ]]; then
     add_test findbugs
   fi
+}
+
+function personality_file_tests
+{
+  builtin_personality_file_tests "$@"
 }
