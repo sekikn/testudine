@@ -14,6 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Override these to match Apache Hadoop's requirements
+
+PATCH_BRANCH_DEFAULT=trunk
+HOW_TO_CONTRIBUTE="https://wiki.apache.org/hadoop/HowToContribute"
+ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
+
 HADOOP_MODULES=""
 
 function hadoop_module_manipulation

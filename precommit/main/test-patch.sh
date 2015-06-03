@@ -52,7 +52,7 @@ function setup_defaults
   ECLIPSE_HOME=${ECLIPSE_HOME:-}
   BUILD_NATIVE=${BUILD_NATIVE:-true}
   PATCH_BRANCH=""
-  PATCH_BRANCH_DEFAULT="trunk"
+  PATCH_BRANCH_DEFAULT="master"
 
   #shellcheck disable=SC2034
   CHANGED_MODULES=""
@@ -62,7 +62,7 @@ function setup_defaults
   REEXECED=false
   RESETREPO=false
   ISSUE=""
-  ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
+  ISSUE_RE='^(TESTUDINE)-[0-9]+$'
   TIMER=$(date +"%s")
   PATCHURL=""
   OSTYPE=$(uname -s)
@@ -1693,14 +1693,14 @@ function mvn_modules_worker
 
     if [[ $? != 0 ]]; then
       echo "${BASEDIR}/${MODULE[${i}]} no longer exists. Skipping:"
-      echo "${MVN}" "${MAVEN_ARGS[@]}" "${@}" "${MODULEEXTRAPARAM[${i}]}" -Ptest-patch "-D${PROJECT_NAME}PatchProcess"
+      echo "${MVN}" "${MAVEN_ARGS[@]}" "${@}" "${MODULEEXTRAPARAM[${i}]}" -Ptest-patch
       ((i=i+1))
       continue
     fi
 
     #shellcheck disable=SC2086
     echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
-       ${MVN} "${MAVEN_ARGS[@]}" "${@}" ${MODULEEXTRAPARAM[${i}]} -Ptest-patch "-D${PROJECT_NAME}PatchProcess"
+       ${MVN} "${MAVEN_ARGS[@]}" "${@}" ${MODULEEXTRAPARAM[${i}]} -Ptest-patch
     if [[ $? == 0 ]] ; then
       mvn_module_status ${i} +1 "${repostatus}-${testtype}-${fn}.txt" "${modulesuffix} in ${repo} passed."
     else
