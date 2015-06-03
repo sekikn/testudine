@@ -115,7 +115,7 @@ function checkstyle_preapply
   personality_modules branch checkstyle
   checkstyle_mvnrunner branch
   result=$?
-  mvn_modules_message branch checkstyle
+  mvn_modules_message branch checkstyle true
 
   # keep track of how much as elapsed for us already
   CHECKSTYLE_TIMER=$(stop_clock)
@@ -225,7 +225,7 @@ function checkstyle_postapply
     ((i=i+1))
   done
 
-  mvn_modules_message patch checkstyle
+  mvn_modules_message patch checkstyle true
 
   if [[ ${result} != 0 ]]; then
     return 1

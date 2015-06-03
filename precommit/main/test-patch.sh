@@ -45,6 +45,7 @@ function setup_defaults
 
   USER_PLUGIN_DIR=""
   LOAD_SYSTEM_PLUGINS=true
+  ALLOWSUMMARIES=true
 
   DOCKERSUPPORT=false
   FINDBUGS_HOME=${FINDBUGS_HOME:-}
@@ -657,6 +658,7 @@ function testudine_usage
   echo "--resetrepo            Forcibly clean the repo"
   echo "--run-tests            Run all relevant tests below the base directory"
   echo "--skip-system-plugins  Do not load plugins from ${BINDIR}/test-patch.d"
+  echo "--summarize=<bool>     Allow tests to summarize results"
   echo "--testlist=<list>      Specify which subsystem tests to use (comma delimited)"
   echo "--test-parallel=<bool> Run multiple tests in parallel (default false in developer mode, true in Jenkins mode)"
   echo "--test-threads=<int>   Number of tests to run in parallel (default defined in ${PROJECT_NAME} build)"
@@ -820,6 +822,9 @@ function parse_args
       ;;
       --skip-system-plugins)
         LOAD_SYSTEM_PLUGINS=false
+      ;;
+      --summarize=*)
+        ALLOWSUMMARIES=${i#*=}
       ;;
       --testlist=*)
         testlist=${i#*=}
@@ -1577,9 +1582,12 @@ function mvn_modules_message
 {
   local repostatus=$1
   local testtype=$2
+  local summarymode=$3
   shift 2
   local i=0
   local repo
+  local goodtime
+  local failure=false
 
   if [[ ${repostatus} == branch ]]; then
     repo=${PATCH_BRANCH}
@@ -1588,20 +1596,49 @@ function mvn_modules_message
   fi
 
   oldtimer=${TIMER}
-  until [[ ${i} -eq ${#MODULE[@]} ]]; do
-    start_clock
-    echo ""
-    echo "${MODULE_STATUS_MSG[${i}]}"
-    echo ""
-    offset_clock "${MODULE_STATUS_TIMER[${i}]}"
-    add_jira_table "${MODULE_STATUS[${i}]}" "${testtype}" "${MODULE_STATUS_MSG[${i}]}"
-    if [[ ${MODULE_STATUS[${i}]} == -1
-      && -n "${MODULE_STATUS_LOG[${i}]}" ]]; then
-      add_jira_footer "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${i}]}"
+
+  if [[ ${summarymode} == true
+    && ${ALLOWSUMMARIES} == true ]]; then
+    until [[ ${i} -eq ${#MODULE[@]} ]]; do
+      if [[ "${MODULE_STATUS[${i}]}" == '+1' ]]; then
+        ((goodtime=goodtime + ${MODULE_STATUS_TIMER[${i}]}))
+      else
+        failure=true
+        start_clock
+        echo ""
+        echo "${MODULE_STATUS_MSG[${i}]}"
+        echo ""
+        offset_clock "${MODULE_STATUS_TIMER[${i}]}"
+        add_jira_table "${MODULE_STATUS[${i}]}" "${testtype}" "${MODULE_STATUS_MSG[${i}]}"
+        if [[ ${MODULE_STATUS[${i}]} == -1
+          && -n "${MODULE_STATUS_LOG[${i}]}" ]]; then
+          add_jira_footer "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${i}]}"
+        fi
+      fi
+      ((i=i+1))
+    done
+    if [[ ${failure} == false ]]; then
+      start_clock
+      offset_clock "${goodtime}"
+      add_jira_table +1 "${testtype}" "${repo} passed"
     fi
-    ((i=i+1))
-  done
+  else
+    until [[ ${i} -eq ${#MODULE[@]} ]]; do
+      start_clock
+      echo ""
+      echo "${MODULE_STATUS_MSG[${i}]}"
+      echo ""
+      offset_clock "${MODULE_STATUS_TIMER[${i}]}"
+      add_jira_table "${MODULE_STATUS[${i}]}" "${testtype}" "${MODULE_STATUS_MSG[${i}]}"
+      if [[ ${MODULE_STATUS[${i}]} == -1
+        && -n "${MODULE_STATUS_LOG[${i}]}" ]]; then
+        add_jira_footer "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${i}]}"
+      fi
+      ((i=i+1))
+    done
+  fi
   TIMER=${oldtimer}
+
 }
 
 ## @description  Add a test result
@@ -1739,7 +1776,7 @@ function precheck_javac
   personality_modules branch javac
   mvn_modules_worker branch javac clean test
   result=$?
-  mvn_modules_message branch javac
+  mvn_modules_message branch javac true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -1767,7 +1804,7 @@ function precheck_javadoc
   personality_modules branch javadoc
   mvn_modules_worker branch javadoc clean javadoc:javadoc
   result=$?
-  mvn_modules_message branch javadoc
+  mvn_modules_message branch javadoc true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -1795,7 +1832,7 @@ function precheck_site
   personality_modules branch site
   mvn_modules_worker branch site clean site site:stage
   result=$?
-  mvn_modules_message branch site
+  mvn_modules_message branch site true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2007,7 +2044,7 @@ function check_patch_javac
     ((i=i+1))
   done
 
-  mvn_modules_message patch javac
+  mvn_modules_message patch javac true
   if [[ ${result} -gt 0 ]]; then
     return 1
   fi
@@ -2097,7 +2134,7 @@ function check_patch_javadoc
     ((i=i+1))
   done
 
-  mvn_modules_message patch javac
+  mvn_modules_message patch javadoc true
   if [[ ${result} -gt 0 ]]; then
     return 1
   fi
@@ -2125,7 +2162,7 @@ function check_site
   personality_modules patch site
   mvn_modules_worker patch site clean site site:stage -Dmaven.javadoc.skip=true
   result=$?
-  mvn_modules_message patch site
+  mvn_modules_message patch site true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2157,7 +2194,7 @@ function precheck_mvninstall
   personality_modules branch mvninstall
   mvn_modules_worker branch mvninstall install -Dmaven.javadoc.skip=true
   result=$?
-  mvn_modules_message branch mvninstall
+  mvn_modules_message branch mvninstall true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2189,7 +2226,7 @@ function check_mvninstall
   personality_modules patch mvninstall
   mvn_modules_worker patch mvninstall install -Dmaven.javadoc.skip=true
   result=$?
-  mvn_modules_message patch mvninstall
+  mvn_modules_message patch mvninstall true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2345,7 +2382,7 @@ function precheck_findbugs
       MODULE_STATUS_TIMER[${i}]=${savestop}
       ((i=i+1))
     done
-    mvn_modules_message branch findbugs
+    mvn_modules_message branch findbugs true
   fi
 
   if [[ ${results} != 0 ]]; then
@@ -2489,7 +2526,7 @@ function check_findbugs
     ((i=i+1))
   done
 
-  mvn_modules_message patch findbugs
+  mvn_modules_message patch findbugs true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2515,7 +2552,7 @@ function check_mvn_eclipse
   personality_modules patch eclipse
   mvn_modules_worker patch eclipse eclipse:eclipse
   result=$?
-  mvn_modules_message patch eclipse
+  mvn_modules_message patch eclipse true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2575,12 +2612,12 @@ function check_unittests
 
   personality_modules patch unit
   mvn_modules_worker patch unit clean install -fae
-  if [[ $? == 0 ]]; then
-    add_jira_table +1 unit "Patch unit tests appear healthy."
+  result=$?
+
+  mvn_modules_message patch unit false
+  if [[ ${result} == 0 ]]; then
     return 0
   fi
-
-  mvn_modules_message patch unit "" "unit tests are broken."
 
   until [[ $i -eq ${#MODULE[@]} ]]; do
     module=${MODULE[${i}]}
