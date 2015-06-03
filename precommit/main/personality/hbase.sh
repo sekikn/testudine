@@ -67,8 +67,15 @@ function personality_modules
   esac
 
   for module in ${CHANGED_MODULES}; do
-    # shellcheck disable=SC2086
-    personality_enqueue_module ${module} ${extra}
+
+    # skip findbugs on hbase-shell
+    if [[ ${module} =~ hbase-shell
+      && ${testtype} =~ findbugs ]]; then
+      true
+    else
+      # shellcheck disable=SC2086
+      personality_enqueue_module ${module} ${extra}
+    fi
   done
 }
 
@@ -91,6 +98,8 @@ function hadoopcheck_postapply
   local logfile
   local count
   local result=0
+
+  big_console_header "Compiling against Hadoop versions"
 
   export MAVEN_OPTS="${MAVEN_OPTS}"
   for HADOOP2_VERSION in ${HADOOP2_VERSIONS}; do
@@ -179,7 +188,6 @@ function hbaseanti_filefilter
   fi
 }
 
-
 function hbaseanti_preapply
 {
   local warnings
@@ -188,6 +196,12 @@ function hbaseanti_preapply
   big_console_header "Checking for known anti-patterns"
 
   start_clock
+
+  verify_needed_test hbaseanti
+  if [[ $? == 0 ]]; then
+    echo "Patch does not need hbaseanti testing."
+    return 0
+  fi
 
   warnings=$(${GREP} 'new TreeMap<byte.*()' "${PATCH_DIR}/patch")
   if [[ ${warnings} -gt 0 ]]; then
