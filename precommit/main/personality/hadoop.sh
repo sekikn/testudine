@@ -127,6 +127,7 @@ function hadoop_javac_ordering
             -Drequire.libwebhdfs -Drequire.test.libhadoop
         ;;
       esac
+    fi
   done
 }
 
