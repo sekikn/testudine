@@ -1565,8 +1565,6 @@ function check_reexec
 ## @replaceable  no
 function mvn_modules_reset
 {
-  MODULE=()
-  MODCOUNT=0
   MODULE_STATUS=()
   MODULE_STATUS_TIMER=()
   MODULE_STATUS_MSG=()
@@ -1738,6 +1736,7 @@ function clear_personality_queue
 {
   testudine_debug "Personality: clear queue"
   MODCOUNT=0
+  MODULE=()
 }
 
 ## @description  Build the queue for tests
