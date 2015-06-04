@@ -129,7 +129,7 @@ add_plugin hbaseprotoc
 
 function hbaseprotoc_filefilter
 {
-  if [[ ${filename} =~ .proto ]]; then
+  if [[ ${filename} =~ \.proto$ ]]; then
     add_test hbaseprotoc
   fi
 }
@@ -183,7 +183,7 @@ add_plugin hbaseanti
 
 function hbaseanti_filefilter
 {
-  if [[ ${filename} =~ .java ]]; then
+  if [[ ${filename} =~ \.java$ ]]; then
     add_test hbaseanti
   fi
 }
