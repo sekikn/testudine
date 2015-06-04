@@ -25,7 +25,6 @@ HADOOP3_VERSIONS="3.0.0-SNAPSHOT"
 # Override the maven options
 MAVEN_OPTS="${MAVEN_OPTS:-"-Xmx3100M"}"
 
-
 function personality_modules
 {
   local repostatus=$1
@@ -39,6 +38,10 @@ function personality_modules
   clear_personality_queue
 
   case ${testtype} in
+    javac)
+      personality_enqueue_module . -DskipTests
+      return
+      ;;
     mvninstall)
       extra="-DskipTests -DHBasePatchProcess"
       if [[ ${repostatus} == branch ]]; then
