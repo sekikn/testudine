@@ -129,6 +129,8 @@ add_plugin hbaseprotoc
 
 function hbaseprotoc_filefilter
 {
+  local filename=$1
+
   if [[ ${filename} =~ \.proto$ ]]; then
     add_test hbaseprotoc
   fi
@@ -183,6 +185,8 @@ add_plugin hbaseanti
 
 function hbaseanti_filefilter
 {
+  local filename=$1
+
   if [[ ${filename} =~ \.java$ ]]; then
     add_test hbaseanti
   fi
