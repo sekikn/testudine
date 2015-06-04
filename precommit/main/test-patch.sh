@@ -1770,7 +1770,7 @@ function precheck_javac
 {
   local result=0
 
-  big_console_header "Pre-patch ${PATCH_BRANCH} Java compilation verification"
+  big_console_header "Pre-patch ${PATCH_BRANCH} Java compilation"
 
   verify_needed_test javac
   if [[ $? == 0 ]]; then
@@ -1798,7 +1798,7 @@ function precheck_javadoc
 {
   local result
 
-  big_console_header "Pre-patch ${PATCH_BRANCH} Javadoc compilation verification"
+  big_console_header "Pre-patch ${PATCH_BRANCH} Javadoc verification"
 
   verify_needed_test javadoc
   if [[ $? == 0 ]]; then
