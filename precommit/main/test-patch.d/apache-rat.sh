@@ -25,6 +25,11 @@ function asflicense_postapply
   personality_modules patch asflicense
   mvn_modules_worker patch asflicense apache-rat:check
 
+  if [[ $? != 0 ]]; then
+    add_jira_table -1 asflicense "apache-rat:check failed"
+    return 1
+  fi
+
   #shellcheck disable=SC2038
   find "${BASEDIR}" -name rat.txt | xargs cat > "${PATCH_DIR}/patch-asflicense.txt"
 

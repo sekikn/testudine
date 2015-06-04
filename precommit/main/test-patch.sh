@@ -1692,6 +1692,10 @@ function mvn_modules_worker
     modulesuffix=$(basename "${MODULE[${i}]}")
     pushd "${BASEDIR}/${MODULE[${i}]}" >/dev/null
 
+    if [[ ${modulesuffix} == . ]]; then
+      modulesuffix="root"
+    fi
+
     if [[ $? != 0 ]]; then
       echo "${BASEDIR}/${MODULE[${i}]} no longer exists. Skipping:"
       echo "${MVN}" "${MAVEN_ARGS[@]}" "${@}" "${MODULEEXTRAPARAM[${i}]}" -Ptest-patch
