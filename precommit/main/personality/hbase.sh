@@ -69,9 +69,9 @@ function personality_modules
   for module in ${CHANGED_MODULES}; do
 
     # skip findbugs on hbase-shell
-    if [[ ${module} =~ hbase-shell
-      && ${testtype} =~ findbugs ]]; then
-      true
+    if [[ ${module} == hbase-shell
+      && ${testtype} == findbugs ]]; then
+      continue
     else
       # shellcheck disable=SC2086
       personality_enqueue_module ${module} ${extra}
