@@ -1775,7 +1775,7 @@ function precheck_javac
   fi
 
   personality_modules branch javac
-  mvn_modules_worker branch javac clean test
+  mvn_modules_worker branch javac clean compile
   result=$?
   mvn_modules_message branch javac true
   if [[ ${result} != 0 ]]; then
@@ -1998,7 +1998,7 @@ function check_patch_javac
   fi
 
   personality_modules patch javac
-  mvn_modules_worker patch javac clean test
+  mvn_modules_worker patch javac clean compile
 
   until [[ ${i} -eq ${#MODULE[@]} ]]; do
     if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
