@@ -35,14 +35,14 @@ function whitespace_postapply
   count=$(wc -l "${PATCH_DIR}/whitespace.txt" | ${AWK} '{print $1}')
 
   if [[ ${count} -gt 0 ]]; then
-    add_jira_table -1 whitespace "The patch has ${count}"\
+    add_vote_table -1 whitespace "The patch has ${count}"\
       " line(s) that end in whitespace. Use git apply --whitespace=fix."
-    add_jira_footer whitespace "@@BASE@@/whitespace.txt"
+    add_footer_table whitespace "@@BASE@@/whitespace.txt"
     popd >/dev/null
     return 1
   fi
 
   popd >/dev/null
-  add_jira_table +1 whitespace "The patch has no lines that end in whitespace."
+  add_vote_table +1 whitespace "The patch has no lines that end in whitespace."
   return 0
 }

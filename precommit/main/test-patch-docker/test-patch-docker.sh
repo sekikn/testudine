@@ -29,7 +29,7 @@ BINDIR=$(cd -P -- "$(dirname -- "${this}")" >/dev/null && pwd -P)
 ## @param        string
 function testudine_debug
 {
-  if [[ -n "${HADOOP_SHELL_SCRIPT_DEBUG}" ]]; then
+  if [[ -n "${TP_SHELL_SCRIPT_DEBUG}" ]]; then
     echo "[$(date) DEBUG]: $*" 1>&2
   fi
 }
@@ -58,7 +58,7 @@ function parse_args
   for i in "$@"; do
     case ${i} in
       --debug)
-        HADOOP_SHELL_SCRIPT_DEBUG=true
+        TP_SHELL_SCRIPT_DEBUG=true
       ;;
       --dockerversion=*)
         DOCKER_VERSION=${i#*=}

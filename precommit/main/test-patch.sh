@@ -98,14 +98,16 @@ function setup_defaults
     ;;
   esac
 
-  declare -a JIRA_COMMENT_TABLE
-  declare -a JIRA_FOOTER_TABLE
-  declare -a JIRA_HEADER
-  declare -a JIRA_TEST_TABLE
+  declare -a TP_HEADER
+  declare -a TP_VOTE_TABLE
+  declare -a TP_TEST_TABLE
+  declare -a TP_FOOTER_TABLE
 
-  JFC=0
-  JTC=0
-  JTT=0
+  TP_HEADER_COUNTER=0
+  TP_VOTE_COUNTER=0
+  TP_TEST_COUNTER=0
+  TP_FOOTER_COUNTER=0
+
   RESULT=0
 }
 
@@ -126,7 +128,7 @@ function testudine_error
 ## @param        string
 function testudine_debug
 {
-  if [[ -n "${HADOOP_SHELL_SCRIPT_DEBUG}" ]]; then
+  if [[ -n "${TP_SHELL_SCRIPT_DEBUG}" ]]; then
     echo "[$(date) DEBUG]: $*" 1>&2
   fi
 }
@@ -213,10 +215,10 @@ function offset_clock
 ## @stability    stable
 ## @replaceable  no
 ## @param        string
-function add_jira_header
+function add_header_line
 {
-  JIRA_HEADER[${JHC}]="| $* |"
-  JHC=$(( JHC+1 ))
+  TP_HEADER[${TP_HEADER_COUNTER}]="| $* |"
+  ((TP_HEADER_COUNTER=TP_HEADER_COUNTER+1 ))
 }
 
 ## @description  Add to the output table. If the first parameter is a number
@@ -234,7 +236,7 @@ function add_jira_header
 ## @param        subsystem
 ## @param        string
 ## @return       Elapsed time display
-function add_jira_table
+function add_vote_table
 {
   local value=$1
   local subsystem=$2
@@ -243,7 +245,7 @@ function add_jira_table
   local calctime
   local -r elapsed=$(stop_clock)
 
-  testudine_debug "add_jira_table ${value} ${subsystem} ${*}"
+  testudine_debug "add_vote_table ${value} ${subsystem} ${*}"
 
   calctime=$(clock_display "${elapsed}")
 
@@ -252,11 +254,11 @@ function add_jira_table
   fi
 
   if [[ -z ${value} ]]; then
-    JIRA_COMMENT_TABLE[${JTC}]="|  | ${subsystem} | | ${*:-} |"
+    TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="|  | ${subsystem} | | ${*:-} |"
   else
-    JIRA_COMMENT_TABLE[${JTC}]="| ${value} | ${subsystem} | ${calctime} | $* |"
+    TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| ${value} | ${subsystem} | ${calctime} | $* |"
   fi
-  ((JTC=JTC+1))
+  ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1))
 }
 
 ## @description  Put the opening environment information at the bottom
@@ -264,17 +266,17 @@ function add_jira_table
 ## @stability     stable
 ## @audience     private
 ## @replaceable  yes
-function open_jira_footer
+function prepopulate_footer
 {
   # shellcheck disable=SC2016
   local -r javaversion=$("${JAVA_HOME}/bin/java" -version 2>&1 | head -1 | ${AWK} '{print $NF}' | tr -d \")
   local -r unamea=$(uname -a)
 
-  add_jira_footer "Java" "${javaversion}"
-  add_jira_footer "uname" "${unamea}"
+  add_footer_table "Java" "${javaversion}"
+  add_footer_table "uname" "${unamea}"
 
   if [[ -n ${PERSONALITY} ]]; then
-    add_jira_footer "Personality" ${PERSONALITY}
+    add_footer_table "Personality" "${PERSONALITY}"
   fi
 }
 
@@ -286,7 +288,7 @@ function finish_docker_stats
 {
   if [[ ${DOCKERMODE} == true ]]; then
     # DOCKER_VERSION is set by our creator.
-    add_jira_footer "Docker" "${DOCKER_VERSION}"
+    add_footer_table "Docker" "${DOCKER_VERSION}"
   fi
 }
 
@@ -294,7 +296,7 @@ function finish_docker_stats
 ## @audience     private
 ## @stability    stable
 ## @replaceable  no
-function close_jira_table
+function finish_vote_table
 {
 
   local -r elapsed=$(stop_global_clock)
@@ -306,8 +308,8 @@ function close_jira_table
   echo "Total Elapsed time: ${calctime}"
   echo ""
 
-  JIRA_COMMENT_TABLE[${JTC}]="| | | ${calctime} | |"
-  JTC=$(( JTC+1 ))
+  TP_VOTE_TABLE[${TP_VOTE_COUNTER}]="| | | ${calctime} | |"
+  ((TP_VOTE_COUNTER=TP_VOTE_COUNTER+1 ))
 }
 
 ## @description  Add to the footer of the display. @@BASE@@ will get replaced with the
@@ -318,13 +320,13 @@ function close_jira_table
 ## @replaceable  no
 ## @param        subsystem
 ## @param        string
-function add_jira_footer
+function add_footer_table
 {
   local subsystem=$1
   shift 1
 
-  JIRA_FOOTER_TABLE[${JFC}]="| ${subsystem} | $* |"
-  JFC=$(( JFC+1 ))
+  TP_FOOTER_TABLE[${TP_FOOTER_COUNTER}]="| ${subsystem} | $* |"
+  ((TP_FOOTER_COUNTER=TP_FOOTER_COUNTER+1 ))
 }
 
 ## @description  Special table just for unit test failures
@@ -333,13 +335,13 @@ function add_jira_footer
 ## @replaceable  no
 ## @param        failurereason
 ## @param        testlist
-function add_jira_test_table
+function add_test_table
 {
   local failure=$1
   shift 1
 
-  JIRA_TEST_TABLE[${JTT}]="| ${failure} | $* |"
-  JTT=$(( JTT+1 ))
+  TP_TEST_TABLE[${TP_TEST_COUNTER}]="| ${failure} | $* |"
+  ((TP_TEST_COUNTER=TP_TEST_COUNTER+1 ))
 }
 
 ## @description  Large display for the user console
@@ -413,7 +415,7 @@ function find_java_home
 
   if [[ -z ${JAVA_HOME:-} ]]; then
     echo "JAVA_HOME is not defined."
-    add_jira_table -1 pre-patch "JAVA_HOME is not defined."
+    add_vote_table -1 pre-patch "JAVA_HOME is not defined."
     return 1
   fi
   return 0
@@ -443,7 +445,7 @@ function write_to_jira
                --issue "${ISSUE}"
     retval=$?
     ${JIRACLI} -s https://issues.apache.org/jira \
-               -a logout -u ${JIRA_USER} \
+               -a logout -u "${JIRA_USER}" \
                -p "${JIRA_PASSWD}"
   fi
   return ${retval}
@@ -592,7 +594,7 @@ function docker_launch
   cd "${CWD}"
   mkdir -p "${PATCH_DIR}/precommit-test"
   cp -pr "${BINDIR}"/* "${PATCH_DIR}/precommit-test"
-  cat ${DOCKERFILE} \
+  cat "${DOCKERFILE}" \
       "${BINDIR}/test-patch-docker/Dockerfile-endstub" \
       > "${PATCH_DIR}/precommit-test/test-patch-docker/Dockerfile"
 
@@ -721,7 +723,7 @@ function parse_args
         HOW_TO_CONTRIBUTE=${i#*=}
       ;;
       --debug)
-        HADOOP_SHELL_SCRIPT_DEBUG=true
+        TP_SHELL_SCRIPT_DEBUG=true
       ;;
       --diff-cmd=*)
         DIFF=${i#*=}
@@ -870,7 +872,7 @@ function parse_args
     else
       start_clock
     fi
-    add_jira_table 0 reexec "precommit patch detected."
+    add_vote_table 0 reexec "precommit patch detected."
   fi
 
   # if we requested offline, pass that to mvn
@@ -889,7 +891,7 @@ function parse_args
     else
       start_clock
     fi
-    add_jira_table 0 docker "docker mode"
+    add_vote_table 0 docker "docker mode"
   fi
 
   # we need absolute dir for ${BASEDIR}
@@ -915,10 +917,6 @@ function parse_args
 
   # we need absolute dir for PATCH_DIR
   PATCH_DIR=$(cd -P -- "${PATCH_DIR}" >/dev/null && pwd -P)
-
-  if [[ ${BUILD_NATIVE} == "true" ]]; then
-    NATIVE_PROFILE=-Pnative
-  fi
 
   if [[ ${JENKINS} == "true" ]]; then
     echo "Running in Jenkins mode"
@@ -1133,11 +1131,11 @@ function git_checkout
     echo "Testing ${ISSUE} patch on ${PATCH_BRANCH}."
   fi
 
-  add_jira_footer "git revision" "${PATCH_BRANCH} / ${GIT_REVISION}"
+  add_footer_table "git revision" "${PATCH_BRANCH} / ${GIT_REVISION}"
 
   if [[ ! -f ${BASEDIR}/pom.xml ]]; then
     testudine_error "ERROR: This verison of test-patch.sh only supports Maven-based builds. Aborting."
-    add_jira_table -1 pre-patch "Unsupported build system."
+    add_vote_table -1 pre-patch "Unsupported build system."
     output_to_jira 1
     cleanup_and_exit 1
   fi
@@ -1342,7 +1340,7 @@ function determine_needed_tests
 
   for i in ${CHANGED_FILES}; do
 
-    personality_file_tests ${i}
+    personality_file_tests "${i}"
 
     for plugin in ${PLUGINS}; do
       if declare -f ${plugin}_filefilter >/dev/null 2>&1; then
@@ -1351,7 +1349,7 @@ function determine_needed_tests
     done
   done
 
-  add_jira_footer "Optional Tests" "${NEEDED_TESTS}"
+  add_footer_table "Optional Tests" "${NEEDED_TESTS}"
 }
 
 ## @description  Given ${PATCH_ISSUE}, determine what type of patch file is in use, and do the
@@ -1398,7 +1396,7 @@ function locate_patch
       echo "${ISSUE} patch is being downloaded at $(date) from"
     fi
     echo "${PATCHURL}"
-    add_jira_footer "Patch URL" "${PATCHURL}"
+    add_footer_table "Patch URL" "${PATCHURL}"
     ${WGET} -q -O "${PATCH_DIR}/patch" "${PATCHURL}"
     if [[ $? != 0 ]];then
       testudine_error "ERROR: ${PATCH_OR_ISSUE} could not be downloaded."
@@ -1423,7 +1421,7 @@ function locate_patch
       cleanup_and_exit 1
     else
       testudine_debug "The patch ${PATCHURL} was not named properly, but it looks like a patch file. proceeding, but issue/branch matching might go awry."
-      add_jira_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
+      add_vote_table 0 patch "The patch file was not named according to ${PROJECT_NAME}'s naming conventions. Please see ${HOW_TO_CONTRIBUTE} for instructions."
     fi
   fi
 }
@@ -1468,7 +1466,7 @@ function verify_patch_file
   "${BINDIR}/smart-apply-patch.sh" "${PATCH_DIR}/patch" dryrun
   if [[ $? != 0 ]] ; then
     echo "PATCH APPLICATION FAILED"
-    add_jira_table -1 patch "The patch command could not apply the patch during dryrun."
+    add_vote_table -1 patch "The patch command could not apply the patch during dryrun."
     return 1
   else
     return 0
@@ -1490,7 +1488,7 @@ function apply_patch_file
   if [[ $? != 0 ]] ; then
     echo "PATCH APPLICATION FAILED"
     ((RESULT = RESULT + 1))
-    add_jira_table -1 patch "The patch command could not apply the patch."
+    add_vote_table -1 patch "The patch command could not apply the patch."
     output_to_console 1
     output_to_jira 1
     cleanup_and_exit 1
@@ -1523,7 +1521,7 @@ function check_reexec
   if [[ ${RESETREPO} == false ]]; then
     ((RESULT = RESULT + 1))
     testudine_debug "can't destructively change the working directory. run with '--resetrepo' please. :("
-    add_jira_table -1 precommit "Couldn't test precommit changes because we aren't configured to destructively change the working directory."
+    add_vote_table -1 precommit "Couldn't test precommit changes because we aren't configured to destructively change the working directory."
     return
   fi
 
@@ -1609,10 +1607,10 @@ function modules_messages
         echo "${MODULE_STATUS_MSG[${i}]}"
         echo ""
         offset_clock "${MODULE_STATUS_TIMER[${i}]}"
-        add_jira_table "${MODULE_STATUS[${i}]}" "${testtype}" "${MODULE_STATUS_MSG[${i}]}"
+        add_vote_table "${MODULE_STATUS[${i}]}" "${testtype}" "${MODULE_STATUS_MSG[${i}]}"
         if [[ ${MODULE_STATUS[${i}]} == -1
           && -n "${MODULE_STATUS_LOG[${i}]}" ]]; then
-          add_jira_footer "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${i}]}"
+          add_footer_table "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${i}]}"
         fi
       fi
       ((i=i+1))
@@ -1620,7 +1618,7 @@ function modules_messages
     if [[ ${failure} == false ]]; then
       start_clock
       offset_clock "${goodtime}"
-      add_jira_table +1 "${testtype}" "${repo} passed"
+      add_vote_table +1 "${testtype}" "${repo} passed"
     fi
   else
     until [[ ${i} -eq ${#MODULE[@]} ]]; do
@@ -1629,10 +1627,10 @@ function modules_messages
       echo "${MODULE_STATUS_MSG[${i}]}"
       echo ""
       offset_clock "${MODULE_STATUS_TIMER[${i}]}"
-      add_jira_table "${MODULE_STATUS[${i}]}" "${testtype}" "${MODULE_STATUS_MSG[${i}]}"
+      add_vote_table "${MODULE_STATUS[${i}]}" "${testtype}" "${MODULE_STATUS_MSG[${i}]}"
       if [[ ${MODULE_STATUS[${i}]} == -1
         && -n "${MODULE_STATUS_LOG[${i}]}" ]]; then
-        add_jira_footer "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${i}]}"
+        add_footer_table "${testtype}" "@@BASE@@/${MODULE_STATUS_LOG[${i}]}"
       fi
       ((i=i+1))
     done
@@ -1905,7 +1903,7 @@ function check_author
 
   if [[ ${CHANGED_FILES} =~ precommit/test-patch ]]; then
     echo "Skipping @author checks as test-patch has been patched."
-    add_jira_table 0 @author "Skipping @author checks as test-patch has been patched."
+    add_vote_table 0 @author "Skipping @author checks as test-patch has been patched."
     return 0
   fi
 
@@ -1914,12 +1912,12 @@ function check_author
   authorTags=$("${GREP}" -c -i '^[^-].*@author' "${PATCH_DIR}/patch")
   echo "There appear to be ${authorTags} @author tags in the patch."
   if [[ ${authorTags} != 0 ]] ; then
-    add_jira_table -1 @author \
+    add_vote_table -1 @author \
       "The patch appears to contain ${authorTags} @author tags which the" \
       " community has agreed to not allow in code contributions."
     return 1
   fi
-  add_jira_table +1 @author "The patch does not contain any @author tags."
+  add_vote_table +1 @author "The patch does not contain any @author tags."
   return 0
 }
 
@@ -1953,13 +1951,13 @@ function check_modified_unittests
 
   echo "There appear to be ${testReferences} test file(s) referenced in the patch."
   if [[ ${testReferences} == 0 ]] ; then
-    add_jira_table -1 "tests included" \
+    add_vote_table -1 "tests included" \
       "The patch doesn't appear to include any new or modified tests. " \
       "Please justify why no new tests are needed for this patch." \
       "Also please list what manual steps were performed to verify this patch."
     return 1
   fi
-  add_jira_table +1 "tests included" \
+  add_vote_table +1 "tests included" \
     "The patch appears to include ${testReferences} new or modified test files."
   return 0
 }
@@ -2248,7 +2246,7 @@ function findbugs_is_installed
 {
   if [[ ! -e "${FINDBUGS_HOME}/bin/findbugs" ]]; then
     printf "\n\n%s is not executable.\n\n" "${FINDBUGS_HOME}/bin/findbugs"
-    add_jira_table -1 findbugs "Findbugs is not installed."
+    add_vote_table -1 findbugs "Findbugs is not installed."
     return 1
   fi
   return 0
@@ -2290,7 +2288,7 @@ function findbugs_mvnrunner
       #shellcheck disable=SC2016
       FINDBUGS_VERSION=$(${AWK} 'match($0, /findbugs-maven-plugin:[^:]*:findbugs/) { print substr($0, RSTART + 22, RLENGTH - 31); exit }' \
            "${PATCH_DIR}/${name}-findbugs-${fn}.txt")
-      add_jira_footer findbugs "v${FINDBUGS_VERSION}"
+      add_footer_table findbugs "v${FINDBUGS_VERSION}"
     fi
 
     warnings_file="${PATCH_DIR}/${name}-findbugs-${fn}-warnings"
@@ -2518,7 +2516,7 @@ function check_findbugs
       while read line; do
         firstpart=$(echo "${line}" | cut -f2 -d:)
         secondpart=$(echo "${line}" | cut -f9- -d' ')
-        add_jira_test_table "" "${firstpart}:${secondpart}"
+        add_test_table "" "${firstpart}:${secondpart}"
       done < <("${FINDBUGS_HOME}/bin/convertXmlToText" "${newbugsbase}.xml")
 
       module_status ${i} -1 "${newbugsbase}.html" "${module} introduced "\
@@ -2579,10 +2577,10 @@ function populate_test_table
 
   for i in "$@"; do
     if [[ -z "${first}" ]]; then
-      add_jira_test_table "${reason}" "${i}"
+      add_test_table "${reason}" "${i}"
       first="${reason}"
     else
-      add_jira_test_table " " "${i}"
+      add_test_table " " "${i}"
     fi
   done
 }
@@ -2670,7 +2668,7 @@ function check_unittests
   fi
 
   if [[ ${JENKINS} == true ]]; then
-    add_jira_footer "Test Results" "${BUILD_URL}testReport/"
+    add_footer_table "Test Results" "${BUILD_URL}testReport/"
   fi
 
   return 1
@@ -2736,23 +2734,23 @@ function output_to_console
     rm "${spcfx}"
   fi
 
-  seccoladj=$(findlargest 2 "${JIRA_COMMENT_TABLE[@]}")
+  seccoladj=$(findlargest 2 "${TP_VOTE_TABLE[@]}")
   if [[ ${seccoladj} -lt 10 ]]; then
     seccoladj=10
   fi
 
   seccoladj=$((seccoladj + 2 ))
   i=0
-  until [[ $i -eq ${#JIRA_HEADER[@]} ]]; do
-    printf "%s\n" "${JIRA_HEADER[${i}]}"
+  until [[ $i -eq ${#TP_HEADER[@]} ]]; do
+    printf "%s\n" "${TP_HEADER[${i}]}"
     ((i=i+1))
   done
 
   printf "| %s | %*s |  %s   | %s\n" "Vote" ${seccoladj} Subsystem Runtime "Comment"
   echo "============================================================================"
   i=0
-  until [[ $i -eq ${#JIRA_COMMENT_TABLE[@]} ]]; do
-    ourstring=$(echo "${JIRA_COMMENT_TABLE[${i}]}" | tr -s ' ')
+  until [[ $i -eq ${#TP_VOTE_TABLE[@]} ]]; do
+    ourstring=$(echo "${TP_VOTE_TABLE[${i}]}" | tr -s ' ')
     vote=$(echo "${ourstring}" | cut -f2 -d\|)
     subs=$(echo "${ourstring}"  | cut -f3 -d\|)
     ela=$(echo "${ourstring}" | cut -f4 -d\|)
@@ -2772,12 +2770,12 @@ function output_to_console
     rm "${commentfile2}" "${commentfile1}" 2>/dev/null
   done
 
-  if [[ ${#JIRA_TEST_TABLE[@]} -gt 0 ]]; then
-    seccoladj=$(findlargest 1 "${JIRA_TEST_TABLE[@]}")
+  if [[ ${#TP_TEST_TABLE[@]} -gt 0 ]]; then
+    seccoladj=$(findlargest 1 "${TP_TEST_TABLE[@]}")
     printf "\n\n%*s | Tests\n" "${seccoladj}" "Reason"
     i=0
-    until [[ $i -eq ${#JIRA_TEST_TABLE[@]} ]]; do
-      ourstring=$(echo "${JIRA_TEST_TABLE[${i}]}" | tr -s ' ')
+    until [[ $i -eq ${#TP_TEST_TABLE[@]} ]]; do
+      ourstring=$(echo "${TP_TEST_TABLE[${i}]}" | tr -s ' ')
       vote=$(echo "${ourstring}" | cut -f2 -d\|)
       subs=$(echo "${ourstring}"  | cut -f3 -d\|)
       printf "%*s | %s\n" "${seccoladj}" "${vote}" "${subs}"
@@ -2789,8 +2787,8 @@ function output_to_console
   echo "============================================================================"
   i=0
 
-  until [[ $i -eq ${#JIRA_FOOTER_TABLE[@]} ]]; do
-    comment=$(echo "${JIRA_FOOTER_TABLE[${i}]}" |
+  until [[ $i -eq ${#TP_FOOTER_TABLE[@]} ]]; do
+    comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
               ${SED} -e "s,@@BASE@@,${PATCH_DIR},g")
     printf "%s\n" "${comment}"
     ((i=i+1))
@@ -2823,19 +2821,19 @@ function output_to_jira
 
   big_console_header "Adding comment to JIRA"
 
-  add_jira_footer "Console output" "${BUILD_URL}console"
+  add_footer_table "Console output" "${BUILD_URL}console"
 
   if [[ ${result} == 0 ]]; then
-    add_jira_header "(/) *{color:green}+1 overall{color}*"
+    add_header_line "(/) *{color:green}+1 overall{color}*"
   else
-    add_jira_header "(x) *{color:red}-1 overall{color}*"
+    add_header_line "(x) *{color:red}-1 overall{color}*"
   fi
 
   { echo "\\\\" ; echo "\\\\"; } >>  "${commentfile}"
 
   i=0
-  until [[ $i -eq ${#JIRA_HEADER[@]} ]]; do
-    printf "%s\n" "${JIRA_HEADER[${i}]}" >> "${commentfile}"
+  until [[ $i -eq ${#TP_HEADER[@]} ]]; do
+    printf "%s\n" "${TP_HEADER[${i}]}" >> "${commentfile}"
     ((i=i+1))
   done
 
@@ -2844,8 +2842,8 @@ function output_to_jira
   echo "|| Vote || Subsystem || Runtime || Comment ||" >> "${commentfile}"
 
   i=0
-  until [[ $i -eq ${#JIRA_COMMENT_TABLE[@]} ]]; do
-    ourstring=$(echo "${JIRA_COMMENT_TABLE[${i}]}" | tr -s ' ')
+  until [[ $i -eq ${#TP_VOTE_TABLE[@]} ]]; do
+    ourstring=$(echo "${TP_VOTE_TABLE[${i}]}" | tr -s ' ')
     vote=$(echo "${ourstring}" | cut -f2 -d\| | tr -d ' ')
     subs=$(echo "${ourstring}"  | cut -f3 -d\|)
     ela=$(echo "${ourstring}" | cut -f4 -d\|)
@@ -2885,13 +2883,13 @@ function output_to_jira
     ((i=i+1))
   done
 
-  if [[ ${#JIRA_TEST_TABLE[@]} -gt 0 ]]; then
+  if [[ ${#TP_TEST_TABLE[@]} -gt 0 ]]; then
     { echo "\\\\" ; echo "\\\\"; } >>  "${commentfile}"
 
     echo "|| Reason || Tests ||" >>  "${commentfile}"
     i=0
-    until [[ $i -eq ${#JIRA_TEST_TABLE[@]} ]]; do
-      printf "%s\n" "${JIRA_TEST_TABLE[${i}]}" >> "${commentfile}"
+    until [[ $i -eq ${#TP_TEST_TABLE[@]} ]]; do
+      printf "%s\n" "${TP_TEST_TABLE[${i}]}" >> "${commentfile}"
       ((i=i+1))
     done
   fi
@@ -2900,8 +2898,8 @@ function output_to_jira
 
   echo "|| Subsystem || Report/Notes ||" >> "${commentfile}"
   i=0
-  until [[ $i -eq ${#JIRA_FOOTER_TABLE[@]} ]]; do
-    comment=$(echo "${JIRA_FOOTER_TABLE[${i}]}" |
+  until [[ $i -eq ${#TP_FOOTER_TABLE[@]} ]]; do
+    comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
               ${SED} -e "s,@@BASE@@,${BUILD_URL}artifact/patchprocess,g")
     printf "%s\n" "${comment}" >> "${commentfile}"
     ((i=i+1))
@@ -3192,7 +3190,7 @@ importplugins
 
 parse_args_plugins "$@"
 
-open_jira_footer
+prepopulate_footer
 
 finish_docker_stats
 
@@ -3241,7 +3239,7 @@ postinstall
 
 runtests
 
-close_jira_table
+finish_vote_table
 
 output_to_console ${RESULT}
 output_to_jira ${RESULT}

@@ -113,7 +113,7 @@ function hadoopcheck_postapply
         -Dhadoop-two.version=${HADOOP2_VERSION}
     count=$(${GREP} -c ERROR ${logfile})
     if [[ ${count} -gt 0 ]]; then
-      add_jira_table -1 hadoopcheck "Patch causes ${count} errors with Hadoop v${HADOP2_VERSION}."
+      add_vote_table -1 hadoopcheck "Patch causes ${count} errors with Hadoop v${HADOP2_VERSION}."
       ((result=result+1))
     fi
   done
@@ -122,7 +122,7 @@ function hadoopcheck_postapply
     return 1
   fi
 
-  add_jira_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${HADOOP2_VERSIONS}."
+  add_vote_table +1 hadoopcheck "Patch does not cause any errors with Hadoop ${HADOOP2_VERSIONS}."
   return 0
 }
 
@@ -212,13 +212,13 @@ function hbaseanti_preapply
 
   warnings=$(${GREP} 'new TreeMap<byte.*()' "${PATCH_DIR}/patch")
   if [[ ${warnings} -gt 0 ]]; then
-    add_jira_table -1 hbaseanti "" "The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted: ${warnings}."
+    add_vote_table -1 hbaseanti "" "The patch appears to have anti-pattern where BYTES_COMPARATOR was omitted: ${warnings}."
     ((result=result+1))
   fi
 
   warnings=$(${GREP} 'import org.apache.hadoop.classification' "${PATCH_DIR}/patch")
   if [[ ${warnings} -gt 0 ]]; then
-    add_jira_table -1 hbaseanti "" "The patch appears use Hadoop classification instead of HBase: ${warnings}."
+    add_vote_table -1 hbaseanti "" "The patch appears use Hadoop classification instead of HBase: ${warnings}."
     ((result=result+1))
   fi
 
@@ -226,6 +226,6 @@ function hbaseanti_preapply
     return 1
   fi
 
-  add_jira_table +1 hbaseanti "" "Patch does not have any anti-patterns."
+  add_vote_table +1 hbaseanti "" "Patch does not have any anti-patterns."
   return 0
 }

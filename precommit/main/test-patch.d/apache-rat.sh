@@ -26,7 +26,7 @@ function asflicense_postapply
   modules_workers patch asflicense apache-rat:check
 
   if [[ $? != 0 ]]; then
-    add_jira_table -1 asflicense "apache-rat:check failed"
+    add_vote_table -1 asflicense "apache-rat:check failed"
     return 1
   fi
 
@@ -40,7 +40,7 @@ function asflicense_postapply
     echo "There appear to be ${numpatch} ASF License warnings after applying the patch."
     if [[ -n ${numpatch}
        && ${numpatch} -gt 0 ]] ; then
-      add_jira_table -1 asflicense "Patch generated ${numpatch} ASF License warnings."
+      add_vote_table -1 asflicense "Patch generated ${numpatch} ASF License warnings."
 
       echo "Lines that start with ????? in the ASF License "\
           "report indicate files that do not have an Apache license header:" \
@@ -49,11 +49,11 @@ function asflicense_postapply
       ${GREP} '\!?????' "${PATCH_DIR}/patch-asflicense.txt" \
       >>  "${PATCH_DIR}/patch-asflicense-problems.txt"
 
-      add_jira_footer asflicense "@@BASE@@/patch-asflicense-problems.txt"
+      add_footer_table asflicense "@@BASE@@/patch-asflicense-problems.txt"
 
       return 1
     fi
   fi
-  add_jira_table 1 asflicense "Patch does not generate ASF License warnings."
+  add_vote_table 1 asflicense "Patch does not generate ASF License warnings."
   return 0
 }

@@ -53,7 +53,7 @@ function flinklib_preapply
   echo_and_redirect "${PATCH_DIR}/branch-flinklib-root.txt" \
      ${MVN} "${MAVEN_ARGS[@]}" package -DskipTests -Dmaven.javadoc.skip=true -Ptest-patch
   if [[ $? != 0 ]]; then
-     add_jira_table -1 flinklib "Unable to determine flink libs in ${PATCH_BRANCH}."
+     add_vote_table -1 flinklib "Unable to determine flink libs in ${PATCH_BRANCH}."
   fi
   FLINK_PRE_LIB_FILES=$(flinklib_count)
   popd >/dev/null
@@ -78,14 +78,14 @@ function flinklib_postapply
 
 
 	if [[ "${FLINK_POST_LIB_FILES}" -gt "${FLINK_PRE_LIB_FILES}" ]]; then
-    add_jira_table -1 flinklib "Patch increases lib folder dependencies from " \
+    add_vote_table -1 flinklib "Patch increases lib folder dependencies from " \
       "${FLINK_PRE_LIB_FILES} to ${FLINK_POST_LIB_FILES}"
     return 1
   elif [[ "${FLINK_POST_LIB_FILES}" -eq "${FLINK_PRE_LIB_FILES}" ]]; then
-    add_jira_table 0 flinklib "Patch did not change lib dependencies" \
+    add_vote_table 0 flinklib "Patch did not change lib dependencies" \
       " (still ${FLINK_PRE_LIB_FILES})"
 	else
-    add_jira_table +1 flinklib "Patch decreases lib folder dependencies by " \
+    add_vote_table +1 flinklib "Patch decreases lib folder dependencies by " \
       "$((FLINK_PRE_LIB_FILES-FLINK_POST_LIB_FILES))."
 	fi
   return 0

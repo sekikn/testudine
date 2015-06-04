@@ -80,7 +80,7 @@ function shellcheck_preapply
     msg="${msg} (This is an old version that has serious bugs. Consider upgrading.)"
   fi
 
-  add_jira_footer shellcheck "${msg}"
+  add_footer_table shellcheck "${msg}"
 
   echo "Running shellcheck against all identifiable shell scripts"
   pushd "${BASEDIR}" >/dev/null
@@ -147,7 +147,7 @@ function shellcheck_postapply
 
   if [[ ! -x "${SHELLCHECK}" ]]; then
     testudine_error "shellcheck is not available."
-    add_jira_table 0 shellcheck "Shellcheck was not available."
+    add_vote_table 0 shellcheck "Shellcheck was not available."
     return 0
   fi
 
@@ -180,12 +180,12 @@ function shellcheck_postapply
     )
 
   if [[ ${diffPostpatch} -gt 0 ]] ; then
-    add_jira_table -1 shellcheck "The applied patch generated "\
+    add_vote_table -1 shellcheck "The applied patch generated "\
       "${diffPostpatch} new shellcheck (v${SHELLCHECK_VERSION}) issues (total was ${numPrepatch}, now ${numPostpatch})."
-    add_jira_footer shellcheck "@@BASE@@/diffpatchshellcheck.txt"
+    add_footer_table shellcheck "@@BASE@@/diffpatchshellcheck.txt"
     return 1
   fi
 
-  add_jira_table +1 shellcheck "There were no new shellcheck issues."
+  add_vote_table +1 shellcheck "There were no new shellcheck issues."
   return 0
 }
