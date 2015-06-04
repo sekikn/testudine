@@ -519,7 +519,7 @@ function compute_gitdiff
         numlines=1
       fi
       counter=0
-      until [[ ${counter} -gt ${numlines} ]]; do
+      until [[ ${counter} -eq ${numlines} ]]; do
           ((actual=counter+startline))
           echo "${file}:${actual}:" >> "${outfile}"
           ((counter=counter+1))
@@ -2195,7 +2195,7 @@ function precheck_mvninstall
   fi
 
   personality_modules branch mvninstall
-  modules_workers branch mvninstall clean install -Dmaven.javadoc.skip=true
+  modules_workers branch mvninstall -fae clean install -Dmaven.javadoc.skip=true
   result=$?
   modules_messages branch mvninstall true
   if [[ ${result} != 0 ]]; then
