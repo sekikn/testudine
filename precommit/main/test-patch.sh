@@ -1563,7 +1563,7 @@ function check_reexec
 ## @audience     public
 ## @stability    evolving
 ## @replaceable  no
-function mvn_modules_reset
+function modules_reset
 {
   MODULE_STATUS=()
   MODULE_STATUS_TIMER=()
@@ -1578,7 +1578,7 @@ function mvn_modules_reset
 ## @param        repostatus
 ## @param        testtype
 ## @param        mvncmdline
-function mvn_modules_message
+function modules_messages
 {
   local repostatus=$1
   local testtype=$2
@@ -1647,7 +1647,7 @@ function mvn_modules_message
 ## @replaceable  no
 ## @param        module
 ## @param        runtime
-function mvn_module_status
+function module_status
 {
   local index=$1
   local value=$2
@@ -1666,7 +1666,7 @@ function mvn_module_status
 ## @param        repostatus
 ## @param        testtype
 ## @param        mvncmdline
-function mvn_modules_worker
+function modules_workers
 {
   local repostatus=$1
   local testtype=$2
@@ -1684,7 +1684,7 @@ function mvn_modules_worker
     repo="the patch"
   fi
 
-  mvn_modules_reset
+  modules_reset
 
   until [[ ${i}  -eq ${#MODULE[@]} ]]; do
     start_clock
@@ -1707,9 +1707,9 @@ function mvn_modules_worker
     echo_and_redirect "${PATCH_DIR}/${repostatus}-${testtype}-${fn}.txt" \
        ${MVN} "${MAVEN_ARGS[@]}" "${@}" ${MODULEEXTRAPARAM[${i}]} -Ptest-patch
     if [[ $? == 0 ]] ; then
-      mvn_module_status ${i} +1 "${repostatus}-${testtype}-${fn}.txt" "${modulesuffix} in ${repo} passed."
+      module_status ${i} +1 "${repostatus}-${testtype}-${fn}.txt" "${modulesuffix} in ${repo} passed."
     else
-      mvn_module_status \
+      module_status \
         ${i} \
         -1 \
         "${repostatus}-${testtype}-${fn}.txt" \
@@ -1779,9 +1779,9 @@ function precheck_javac
   fi
 
   personality_modules branch javac
-  mvn_modules_worker branch javac clean compile
+  modules_workers branch javac clean compile
   result=$?
-  mvn_modules_message branch javac true
+  modules_messages branch javac true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -1807,9 +1807,9 @@ function precheck_javadoc
   fi
 
   personality_modules branch javadoc
-  mvn_modules_worker branch javadoc clean javadoc:javadoc
+  modules_workers branch javadoc clean javadoc:javadoc
   result=$?
-  mvn_modules_message branch javadoc true
+  modules_messages branch javadoc true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -1835,9 +1835,9 @@ function precheck_site
   fi
 
   personality_modules branch site
-  mvn_modules_worker branch site clean site site:stage
+  modules_workers branch site clean site site:stage
   result=$?
-  mvn_modules_message branch site true
+  modules_messages branch site true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2002,7 +2002,7 @@ function check_patch_javac
   fi
 
   personality_modules patch javac
-  mvn_modules_worker patch javac clean compile
+  modules_workers patch javac clean compile
 
   until [[ ${i} -eq ${#MODULE[@]} ]]; do
     if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
@@ -2039,7 +2039,7 @@ function check_patch_javac
         "${PATCH_DIR}/patch-javac-${fn}-warning.txt" \
         > "${PATCH_DIR}/javac-${fn}-diff.txt"
 
-      mvn_module_status ${i} -1 "javac-${fn}-diff.txt" \
+      module_status ${i} -1 "javac-${fn}-diff.txt" \
         "Patched ${MODULE[${i}]} generated "\
         "$((numpatch-numbranch)) additional warning messages." \
 
@@ -2049,7 +2049,7 @@ function check_patch_javac
     ((i=i+1))
   done
 
-  mvn_modules_message patch javac true
+  modules_messages patch javac true
   if [[ ${result} -gt 0 ]]; then
     return 1
   fi
@@ -2093,7 +2093,7 @@ function check_patch_javadoc
   fi
 
   personality_modules patch javadoc
-  mvn_modules_worker patch javadoc clean javadoc:javadoc
+  modules_workers patch javadoc clean javadoc:javadoc
 
   until [[ ${i} -eq ${#MODULE[@]} ]]; do
     if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
@@ -2129,7 +2129,7 @@ function check_patch_javadoc
       rm -f "${PATCH_DIR}/branch-javadoc-${fn}-filtered.txt" \
          "${PATCH_DIR}/patch-javadoc-${fn}-filtered.txt"
 
-      mvn_module_status ${i} -1  "javadoc-${fn}-diff.txt" \
+      module_status ${i} -1  "javadoc-${fn}-diff.txt" \
         "Patched ${MODULE[${i}]} generated "\
         "$((numpatch-numbranch)) additional warning messages." \
 
@@ -2139,7 +2139,7 @@ function check_patch_javadoc
     ((i=i+1))
   done
 
-  mvn_modules_message patch javadoc true
+  modules_messages patch javadoc true
   if [[ ${result} -gt 0 ]]; then
     return 1
   fi
@@ -2165,9 +2165,9 @@ function check_site
   fi
 
   personality_modules patch site
-  mvn_modules_worker patch site clean site site:stage -Dmaven.javadoc.skip=true
+  modules_workers patch site clean site site:stage -Dmaven.javadoc.skip=true
   result=$?
-  mvn_modules_message patch site true
+  modules_messages patch site true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2197,9 +2197,9 @@ function precheck_mvninstall
   fi
 
   personality_modules branch mvninstall
-  mvn_modules_worker branch mvninstall clean install -Dmaven.javadoc.skip=true
+  modules_workers branch mvninstall clean install -Dmaven.javadoc.skip=true
   result=$?
-  mvn_modules_message branch mvninstall true
+  modules_messages branch mvninstall true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2229,9 +2229,9 @@ function check_mvninstall
   fi
 
   personality_modules patch mvninstall
-  mvn_modules_worker patch mvninstall install -Dmaven.javadoc.skip=true
+  modules_workers patch mvninstall install -Dmaven.javadoc.skip=true
   result=$?
-  mvn_modules_message patch mvninstall true
+  modules_messages patch mvninstall true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2271,7 +2271,7 @@ function findbugs_mvnrunner
   local savestop
 
   personality_modules "${name}" findbugs
-  mvn_modules_worker "${name}" findbugs clean test findbugs:findbugs
+  modules_workers "${name}" findbugs clean test findbugs:findbugs
 
   until [[ ${i} -eq ${#MODULE[@]} ]]; do
     if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
@@ -2307,7 +2307,7 @@ function findbugs_mvnrunner
     if [[ $? != 0 ]]; then
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
-      mvn_module_status ${i} -1 "" "${name}/${module} cannot run setBugDatabaseInfo from findbugs"
+      module_status ${i} -1 "" "${name}/${module} cannot run setBugDatabaseInfo from findbugs"
       ((retval = retval + 1))
       ((i=i+1))
       continue
@@ -2319,7 +2319,7 @@ function findbugs_mvnrunner
     if [[ $? != 0 ]]; then
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
-      mvn_module_status ${i} -1 "" "${name}/${module} cannot run convertXmlToText from findbugs"
+      module_status ${i} -1 "" "${name}/${module} cannot run convertXmlToText from findbugs"
       ((result = result + 1))
     fi
 
@@ -2380,14 +2380,14 @@ function precheck_findbugs
           | ${AWK} '{print $1}')
 
       if [[ ${module_findbugs_warnings} -gt 0 ]] ; then
-        mvn_module_status ${i} -1 "branch-findbugs-${fn}.html" "${module} in ${PATCH_BRANCH} cannot run convertXmlToText from findbugs"
+        module_status ${i} -1 "branch-findbugs-${fn}.html" "${module} in ${PATCH_BRANCH} cannot run convertXmlToText from findbugs"
         ((results=results+1))
       fi
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
       ((i=i+1))
     done
-    mvn_modules_message branch findbugs true
+    modules_messages branch findbugs true
   fi
 
   if [[ ${results} != 0 ]]; then
@@ -2463,7 +2463,7 @@ function check_findbugs
             "${patchxml}"
     if [[ $? != 0 ]]; then
       popd >/dev/null
-      mvn_module_status ${i} -1 "" "${module} cannot run computeBugHistory from findbugs"
+      module_status ${i} -1 "" "${module} cannot run computeBugHistory from findbugs"
       ((result=result+1))
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
@@ -2476,7 +2476,7 @@ function check_findbugs
         "${combined_xml}" "${newbugsbase}.xml" | ${AWK} '{print $1}')
     if [[ $? != 0 ]]; then
       popd >/dev/null
-      mvn_module_status ${i} -1 "" "${module} cannot run filterBugs (#1) from findbugs"
+      module_status ${i} -1 "" "${module} cannot run filterBugs (#1) from findbugs"
       ((result=result+1))
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
@@ -2489,7 +2489,7 @@ function check_findbugs
         "${combined_xml}" "${newbugsbase}.xml" | ${AWK} '{print $1}')
     if [[ $? != 0 ]]; then
       popd >/dev/null
-      mvn_module_status ${i} -1 "" "${module} cannot run filterBugs (#2) from findbugs"
+      module_status ${i} -1 "" "${module} cannot run filterBugs (#2) from findbugs"
       ((result=result+1))
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
@@ -2505,7 +2505,7 @@ function check_findbugs
         "${newbugsbase}.html"
     if [[ $? != 0 ]]; then
       popd >/dev/null
-      mvn_module_status ${i} -1 "" "${module} cannot run convertXmlToText from findbugs"
+      module_status ${i} -1 "" "${module} cannot run convertXmlToText from findbugs"
       ((result=result+1))
       savestop=$(stop_clock)
       MODULE_STATUS_TIMER[${i}]=${savestop}
@@ -2521,7 +2521,7 @@ function check_findbugs
         add_jira_test_table "" "${firstpart}:${secondpart}"
       done < <("${FINDBUGS_HOME}/bin/convertXmlToText" "${newbugsbase}.xml")
 
-      mvn_module_status ${i} -1 "${newbugsbase}.html" "${module} introduced "\
+      module_status ${i} -1 "${newbugsbase}.html" "${module} introduced "\
         "${new_findbugs_warnings} new FindBugs issues."
       ((result=result+1))
     fi
@@ -2531,7 +2531,7 @@ function check_findbugs
     ((i=i+1))
   done
 
-  mvn_modules_message patch findbugs true
+  modules_messages patch findbugs true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2555,9 +2555,9 @@ function check_mvn_eclipse
   fi
 
   personality_modules patch eclipse
-  mvn_modules_worker patch eclipse eclipse:eclipse
+  modules_workers patch eclipse eclipse:eclipse
   result=$?
-  mvn_modules_message patch eclipse true
+  modules_messages patch eclipse true
   if [[ ${result} != 0 ]]; then
     return 1
   fi
@@ -2616,10 +2616,10 @@ function check_unittests
   fi
 
   personality_modules patch unit
-  mvn_modules_worker patch unit clean install -fae
+  modules_workers patch unit clean install -fae
   result=$?
 
-  mvn_modules_message patch unit false
+  modules_messages patch unit false
   if [[ ${result} == 0 ]]; then
     return 0
   fi

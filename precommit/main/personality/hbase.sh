@@ -153,7 +153,7 @@ function hbaseprotoc_postapply
   fi
 
   personality_modules patch hbaseprotoc
-  mvn_modules_worker patch hbaseprotoc -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
+  modules_workers patch hbaseprotoc -DskipTests -Pcompile-protobuf -X -DHBasePatchProcess
 
   until [[ $i -eq ${#MODULE[@]} ]]; do
     if [[ ${MODULE_STATUS[${i}]} == -1 ]]; then
@@ -168,14 +168,14 @@ function hbaseprotoc_postapply
     count=$(${GREP} -c ERROR ${logfile})
 
     if [[ ${count} -gt 0 ]]; then
-      mvn_module_status ${i} -1 "patch-hbaseprotoc-${fn}.txt" "Patch generated "\
+      module_status ${i} -1 "patch-hbaseprotoc-${fn}.txt" "Patch generated "\
         "${count} new protoc errors in ${module}."
       ((results=results+1))
     fi
     ((i=i+1))
   done
 
-  mvn_modules_message patch hbaseprotoc true
+  modules_messages patch hbaseprotoc true
   if [[ ${results} -gt 0 ]]; then
     return 1
   fi

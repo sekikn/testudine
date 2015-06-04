@@ -23,7 +23,7 @@ function asflicense_postapply
   start_clock
 
   personality_modules patch asflicense
-  mvn_modules_worker patch asflicense apache-rat:check
+  modules_workers patch asflicense apache-rat:check
 
   if [[ $? != 0 ]]; then
     add_jira_table -1 asflicense "apache-rat:check failed"

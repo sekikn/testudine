@@ -41,7 +41,7 @@ function checkstyle_mvnrunner
   local repo
   local modulesuffix
 
-  mvn_modules_reset
+  modules_reset
 
   if [[ ${repostatus} == branch ]]; then
     repo=${PATCH_BRANCH}
@@ -69,9 +69,9 @@ function checkstyle_mvnrunner
         | ${SED} -e "s,${BASEDIR},.,g" \
             > "${tmp}"
     if [[ $? == 0 ]] ; then
-      mvn_module_status ${i} +1 "${logfile}" "${modulesuffix} in ${repo} passed checkstyle"
+      module_status ${i} +1 "${logfile}" "${modulesuffix} in ${repo} passed checkstyle"
     else
-      mvn_module_status ${i} -1 "${logfile}" "${modulesuffix} in ${repo} failed checkstyle"
+      module_status ${i} -1 "${logfile}" "${modulesuffix} in ${repo} failed checkstyle"
       ((result = result + 1))
     fi
     savestop=$(stop_clock)
@@ -113,7 +113,7 @@ function checkstyle_preapply
   personality_modules branch checkstyle
   checkstyle_mvnrunner branch
   result=$?
-  mvn_modules_message branch checkstyle true
+  modules_messages branch checkstyle true
 
   # keep track of how much as elapsed for us already
   CHECKSTYLE_TIMER=$(stop_clock)
@@ -216,14 +216,14 @@ function checkstyle_postapply
       # shellcheck disable=SC2016
       numpostpatch=$(wc -l "${PATCH_DIR}/patch-checkstyle-${fn}.txt" | ${AWK} '{print $1}')
 
-      mvn_module_status ${i} -1 "diff-checkstyle-${fn}.txt" "Patch generated "\
+      module_status ${i} -1 "diff-checkstyle-${fn}.txt" "Patch generated "\
         "${diffpostpatch} new checkstyle issues in "\
         "${module} (total was ${numprepatch}, now ${numpostpatch})."
     fi
     ((i=i+1))
   done
 
-  mvn_modules_message patch checkstyle true
+  modules_messages patch checkstyle true
 
   if [[ ${result} != 0 ]]; then
     return 1
