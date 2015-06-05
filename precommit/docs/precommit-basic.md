@@ -34,7 +34,7 @@ test-patch has the following requirements:
 
 * Maven-based project (and maven installed)
 * git-based project (and git installed)
-* bash v3.x or higher
+* bash v3.2 or higher
 * findbugs 3.x installed
 * shellcheck installed
 * GNU diff
